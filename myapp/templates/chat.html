@@ -11,19 +11,19 @@
 {% block content %}
 <div style="display:flex;height:100%;overflow:hidden;padding:12px 24px 12px" class="chat-layout">
   <!-- Conversation List -->
-  <div class="card" id="convPanel" style="width:340px;min-width:340px;display:flex;flex-direction:column;overflow:hidden;margin-right:12px" class="conv-panel">
-    <div class="card-header px-3 py-3 d-flex align-items-center justify-content-between">
-      <span class="fw-bold"><i class="bi bi-chat-dots me-2" style="color:var(--brand)"></i>会话列表</span>
+  <div class="card" id="convPanel" style="width:260px;min-width:260px;display:flex;flex-direction:column;overflow:hidden;margin-right:12px" class="conv-panel">
+    <div class="card-header px-3 py-2 d-flex align-items-center justify-content-between">
+      <span class="fw-bold" style="font-size:.88rem"><i class="bi bi-chat-dots me-2" style="color:var(--brand)"></i>会话列表</span>
       <span class="muted small" id="convCount">0</span>
     </div>
-    <div class="content-scroll p-2" id="convList" style="flex:1"></div>
+    <div class="content-scroll p-1" id="convList" style="flex:1"></div>
     <!-- Unread summary bar -->
-    <div id="unreadBar" class="px-3 py-2 border-top" style="display:none;background:var(--brand-subtle);font-size:.78rem;cursor:pointer">
+    <div id="unreadBar" class="px-3 py-1 border-top" style="display:none;background:var(--brand-subtle);font-size:.75rem;cursor:pointer">
       <i class="bi bi-envelope me-1" style="color:var(--brand)"></i>
       <span id="unreadBarText">0 条未读消息</span>
     </div>
     <!-- Show archived button -->
-    <div class="px-3 py-2 border-top text-center" style="font-size:.78rem">
+    <div class="px-3 py-1 border-top text-center" style="font-size:.75rem">
       <button class="btn btn-sm btn-link text-decoration-none muted" id="showArchivedConvsBtn"><i class="bi bi-archive me-1"></i><span id="archivedConvLabel">归档会话</span></button>
     </div>
   </div>
@@ -232,44 +232,44 @@ function renderConversations(){
   });
   filtered.forEach(c => {
     const div = document.createElement('div');
-    div.className = 'chat-item d-flex align-items-center gap-2 p-2' + (c.id === currentConvId ? ' active' : '');
+    div.className = 'chat-item d-flex align-items-center gap-1 p-1' + (c.id === currentConvId ? ' active' : '');
     div.dataset.id = c.id;
 
     const isGroup = c.type === 'group';
     let avatarContent;
     if(isGroup){
       const memberCount = c.participants?.length || 0;
-      avatarContent = `<div class="d-flex align-items-center justify-content-center position-relative" style="width:44px;height:44px;border-radius:50%;background:#f0e6ff;color:#7c3aed;font-size:1.2rem">
+      avatarContent = `<div class="d-flex align-items-center justify-content-center position-relative" style="width:36px;height:36px;border-radius:50%;background:#f0e6ff;color:#7c3aed;font-size:1rem">
         <i class="bi bi-people"></i>
       </div>`;
     } else {
       const p = c.participants?.find(p => p.id !== CURRENT_USER?.id) || c.participants?.[0] || {};
       avatarContent = `<div class="position-relative">
-        ${avatarHtml(p.avatar_url, p.display_name, 'avatar')}
-        <span class="status-dot ${p.online_status || 'offline'}" style="position:absolute;bottom:0;right:0"></span>
+        ${avatarHtml(p.avatar_url, p.display_name, 'avatar-sm')}
+        <span class="status-dot ${p.online_status || 'offline'}" style="position:absolute;bottom:-1px;right:-1px"></span>
       </div>`;
     }
 
     const tc = typeConfig[c.type] || typeConfig.direct;
-    const typeTag = `<span class="tag ${tc.cls}" style="font-size:.6rem;padding:1px 6px">${tc.tag}</span>`;
-    const memberBadge = isGroup && c.participants?.length ? `<span class="muted" style="font-size:.65rem">${c.participants.length}人</span>` : '';
+    const typeTag = `<span class="tag ${tc.cls}" style="font-size:.55rem;padding:1px 5px">${tc.tag}</span>`;
+    const memberBadge = isGroup && c.participants?.length ? `<span class="muted" style="font-size:.6rem">${c.participants.length}人</span>` : '';
 
     div.innerHTML = `
       <div class="position-relative" style="flex-shrink:0">
         ${avatarContent}
-        ${c.unread_count > 0 ? `<span class="badge rounded-pill text-bg-danger position-absolute" style="top:-4px;right:-4px;font-size:.6rem;min-width:18px;height:18px;line-height:12px">${c.unread_count > 99 ? '99+' : c.unread_count}</span>` : ''}
+        ${c.unread_count > 0 ? `<span class="badge rounded-pill text-bg-danger position-absolute" style="top:-4px;right:-4px;font-size:.55rem;min-width:16px;height:16px;line-height:10px;padding:0 4px">${c.unread_count > 99 ? '99+' : c.unread_count}</span>` : ''}
       </div>
       <div style="flex:1;min-width:0">
         <div class="d-flex justify-content-between align-items-center">
           <div class="d-flex align-items-center gap-1" style="min-width:0">
-            <strong style="font-size:.88rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${c.title || '未命名'}</strong>
+            <strong style="font-size:.82rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${c.title || '未命名'}</strong>
             ${typeTag} ${memberBadge}
             ${c.archived ? '<span class="tag tag-archived" style="font-size:.6rem">已归档</span>' : ''}
           </div>
           <div class="d-flex align-items-center gap-1" style="flex-shrink:0">
-            <span class="muted" style="font-size:.68rem">${c.last_message_at ? new Date(c.last_message_at).toLocaleTimeString('zh-CN', {hour:'2-digit',minute:'2-digit'}) : ''}</span>
+            <span class="muted" style="font-size:.62rem">${c.last_message_at ? new Date(c.last_message_at).toLocaleTimeString('zh-CN', {hour:'2-digit',minute:'2-digit'}) : ''}</span>
             ${CURRENT_USER ? `
-              <button class="btn btn-sm conv-archive-btn p-0" data-id="${c.id}" data-archived="${c.archived}" title="${c.archived ? '恢复' : '归档'}" style="font-size:.72rem;color:var(--muted);background:none;border:none;line-height:1">
+              <button class="btn btn-sm conv-archive-btn p-0" data-id="${c.id}" data-archived="${c.archived}" title="${c.archived ? '恢复' : '归档'}" style="font-size:.65rem;color:var(--muted);background:none;border:none;line-height:1">
                 <i class="bi ${c.archived ? 'bi-arrow-counterclockwise' : 'bi-archive'}"></i>
               </button>
             ` : ''}
