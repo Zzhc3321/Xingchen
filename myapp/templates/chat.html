@@ -1,0 +1,920 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}即时通讯 - 星辰协同平台{% endblock %}
+{% block page_title %}即时通讯{% endblock %}
+
+{% block extra_head %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/marked/12.0.2/marked.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.1.6/purify.min.js"></script>
+{% endblock %}
+
+{% block content %}
+<div style="display:flex;height:100%;overflow:hidden;padding:12px 24px 12px" class="chat-layout">
+  <!-- Conversation List -->
+  <div class="card" id="convPanel" style="width:340px;min-width:340px;display:flex;flex-direction:column;overflow:hidden;margin-right:12px" class="conv-panel">
+    <div class="card-header px-3 py-3 d-flex align-items-center justify-content-between">
+      <span class="fw-bold"><i class="bi bi-chat-dots me-2" style="color:var(--brand)"></i>会话列表</span>
+      <span class="muted small" id="convCount">0</span>
+    </div>
+    <div class="content-scroll p-2" id="convList" style="flex:1"></div>
+    <!-- Unread summary bar -->
+    <div id="unreadBar" class="px-3 py-2 border-top" style="display:none;background:var(--brand-subtle);font-size:.78rem;cursor:pointer">
+      <i class="bi bi-envelope me-1" style="color:var(--brand)"></i>
+      <span id="unreadBarText">0 条未读消息</span>
+    </div>
+    <!-- Show archived button -->
+    <div class="px-3 py-2 border-top text-center" style="font-size:.78rem">
+      <button class="btn btn-sm btn-link text-decoration-none muted" id="showArchivedConvsBtn"><i class="bi bi-archive me-1"></i><span id="archivedConvLabel">归档会话</span></button>
+    </div>
+  </div>
+
+  <!-- Chat Window -->
+  <div class="card" id="chatPanel" style="flex:1;display:none;flex-direction:column;overflow:hidden">
+    <!-- Chat Header -->
+    <div class="card-header px-3 py-3 d-flex align-items-center justify-content-between">
+      <div class="d-flex align-items-center gap-2">
+        <button class="btn btn-sm btn-outline-secondary d-md-none" id="backToListBtn" style="border-radius:999px"><i class="bi bi-arrow-left"></i></button>
+        <div>
+          <div class="d-flex align-items-center gap-2">
+            <strong id="chatTitle">选择会话</strong>
+            <span class="tag tag-direct" id="chatTypeTag" style="display:none;font-size:.65rem">私聊</span>
+          </div>
+          <div class="muted" style="font-size:.78rem" id="chatMeta"></div>
+        </div>
+      </div>
+      <div class="d-flex gap-1">
+        <button class="btn btn-sm btn-outline-secondary" id="archiveConvBtn" style="border-radius:999px;display:none" title="归档会话"><i class="bi bi-archive"></i></button>
+        <button class="btn btn-sm btn-outline-secondary" id="chatMembersBtn" style="border-radius:999px;display:none" title="群成员管理"><i class="bi bi-people"></i></button>
+        <button class="btn btn-sm btn-outline-danger" id="deleteConvBtn" style="border-radius:999px" title="删除会话"><i class="bi bi-trash"></i></button>
+      </div>
+    </div>
+    <!-- Messages -->
+    <div class="content-scroll p-3" id="msgContainer" style="flex:1;display:flex;flex-direction:column">
+      <div id="msgList" style="margin-top:auto"></div>
+    </div>
+    <!-- Composer -->
+    <div class="p-3 border-top" style="background:#fff">
+      <div class="d-flex gap-2 align-items-end">
+        <button class="btn btn-outline-secondary mb-0" id="aiRobotBtn" style="border-radius:999px;padding:6px 12px;display:none" title="@星辰AI助手">
+          <i class="bi bi-robot"></i>
+        </button>
+        <label class="btn btn-outline-secondary mb-0" style="border-radius:999px;cursor:pointer;padding:6px 12px" title="发送文件">
+          <i class="bi bi-paperclip"></i>
+          <input type="file" id="fileInput" style="display:none">
+        </label>
+        <div style="flex:1">
+          <div id="pendingFile" style="display:none;margin-bottom:4px;font-size:.75rem;color:var(--brand);background:var(--brand-soft);border-radius:8px;padding:4px 10px;align-items:center;gap:6px">
+            <i class="bi bi-file-earmark"></i>
+            <span id="pendingFileName" style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></span>
+            <button class="btn btn-sm p-0" id="clearPendingFileBtn" style="font-size:.7rem;color:var(--muted);background:none;border:none"><i class="bi bi-x"></i></button>
+          </div>
+          <textarea id="msgInput" class="form-control" rows="1" placeholder="输入消息..." style="border-radius:12px;resize:none;padding:8px 14px;max-height:120px;border-color:var(--line);font-size:.9rem"></textarea>
+        </div>
+        <button class="btn btn-primary" id="sendBtn" style="border-radius:999px;padding:8px 18px"><i class="bi bi-send"></i></button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Empty State -->
+  <div class="card" id="emptyPanel" style="flex:1;display:flex;align-items:center;justify-content:center">
+    <div class="empty-state">
+      <i class="bi bi-chat-dots" style="font-size:4rem;color:var(--line)"></i>
+      <h5 class="mt-3 muted">选择一个会话开始聊天</h5>
+      <p class="muted small">从左侧选择私聊或群聊</p>
+    </div>
+  </div>
+</div>
+
+<!-- Members Modal -->
+<div class="modal fade" id="membersModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content" style="border-radius:12px;border:none">
+      <div class="modal-header border-0 pb-0">
+        <h5 class="fw-bold">群成员</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body" id="membersModalBody"></div>
+      <div class="modal-footer border-0 pt-0">
+        <div class="d-flex gap-2 w-100">
+          <input class="form-control" id="inviteMemberSearch" placeholder="搜索用户名添加成员" style="border-radius:10px">
+          <button class="btn btn-outline-primary" id="inviteMemberSearchBtn" style="border-radius:10px"><i class="bi bi-search"></i></button>
+        </div>
+        <div id="inviteSearchResults" class="w-100 mt-2" style="display:none"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Image Preview Modal -->
+<div class="modal fade" id="imagePreviewModal" tabindex="-1">
+  <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal-content" style="border-radius:12px;border:none;background:transparent;box-shadow:none">
+      <div class="text-end mb-2"><button type="button" class="btn btn-sm btn-light rounded-pill" data-bs-dismiss="modal"><i class="bi bi-x-lg"></i></button></div>
+      <img id="imagePreviewTarget" src="" style="width:100%;border-radius:12px;box-shadow:0 20px 60px rgba(0,0,0,.3)">
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<style>
+  .chat-item { cursor: pointer; transition: .15s; border-radius: 10px; }
+  .chat-item:hover { background: var(--brand-soft); }
+  .chat-item.active { background: var(--brand-soft); border-left: 3px solid var(--brand); border-radius: 0 10px 10px 0; }
+  .msg-bubble { padding: 10px 14px; border-radius: 12px; line-height: 1.6; font-size: .9rem; position: relative; }
+  .md-content p { margin-bottom: .4rem; }
+  .md-content p:last-child { margin-bottom: 0; }
+  .md-content ul, .md-content ol { margin: .3rem 0; padding-left: 1.4rem; }
+  .md-content li { margin-bottom: .15rem; }
+  .md-content code { background: #f1f5f9; padding: .1em .4em; border-radius: 4px; font-size: .85em; font-family: ui-monospace, monospace; }
+  .md-content pre { background: #1e293b; color: #e2e8f0; padding: .7rem 1rem; border-radius: 8px; overflow-x: auto; margin: .4rem 0; font-size: .82rem; }
+  .md-content pre code { background: transparent; color: inherit; padding: 0; border-radius: 0; font-size: inherit; }
+  .md-content blockquote { border-left: 3px solid var(--line); padding-left: .8rem; margin: .4rem 0; color: var(--muted); }
+  .md-content table { border-collapse: collapse; margin: .4rem 0; font-size: .85rem; width: 100%; }
+  .md-content th, .md-content td { border: 1px solid var(--line); padding: 4px 10px; text-align: left; }
+  .md-content th { background: var(--soft); font-weight: 600; }
+  .md-content a { color: var(--brand); text-decoration: underline; }
+  .md-content img { max-width: 100%; border-radius: 8px; margin: .4rem 0; }
+  .md-content hr { border: none; border-top: 1px solid var(--line); margin: .6rem 0; }
+  .is-me .md-content code { background: rgba(255,255,255,.15); }
+  .is-me .md-content pre { background: rgba(0,0,0,.25); border: 1px solid rgba(255,255,255,.1); }
+  .is-me .md-content blockquote { border-left-color: rgba(255,255,255,.3); color: rgba(255,255,255,.75); }
+  .is-me .md-content th, .is-me .md-content td { border-color: rgba(255,255,255,.2); }
+  .is-me .md-content th { background: rgba(255,255,255,.1); }
+  .is-me .md-content a { color: #93c5fd; }
+  .msg-bubble.is-me { border-bottom-right-radius: 4px; }
+  .msg-bubble.is-other { border-bottom-left-radius: 4px; }
+  @media (max-width: 768px) {
+    .chat-layout { padding: 8px 8px !important; gap: 0; }
+    .chat-layout #convPanel { width: 100% !important; min-width: 0 !important; margin-right: 0 !important; }
+    .chat-layout #chatPanel { position: fixed; inset: 56px 0 0; z-index: 500; border-radius: 0 !important; margin: 0 !important; display: none; }
+    .chat-layout #chatPanel.active-mobile { display: flex !important; }
+    .chat-layout #emptyPanel { display: none !important; }
+  }
+</style>
+<script>
+// ===== State =====
+let conversations = [];
+let currentConvId = null;
+let currentConv = null;
+let ws = null;
+let showArchivedConvs = false;
+let wsReconnectTimer = null;
+let msgListEl = document.getElementById('msgList');
+let convListEl = document.getElementById('convList');
+let allMessages = [];
+
+// ===== SVG Avatar Fallback =====
+function avatarHtml(url, name, size='avatar-sm'){
+  return `<img src="${url || '/static/avater.jpeg'}" class="${size}" onerror="this.src='/static/avater.jpeg'" alt="">`;
+}
+
+// ===== Type Helpers =====
+const typeConfig = {
+  direct: {icon: 'bi-person', tag: '私聊', cls: 'tag-direct'},
+  group: {icon: 'bi-people', tag: '群聊', cls: 'tag-group'}
+};
+
+// ===== Load Conversations =====
+async function loadConversations(){
+  try {
+    const r = await fetch('/api/conversations/', {credentials:'include'});
+    const data = await r.json();
+    conversations = data.conversations || [];
+    document.getElementById('convCount').textContent = showArchivedConvs ? conversations.length : conversations.filter(c => !c.archived).length;
+    renderConversations();
+    updateUnreadBar();
+    updateNotifBadge();
+  } catch(e){ console.error(e); }
+}
+
+function updateUnreadBar(){
+  const totalUnread = conversations.reduce((sum, c) => sum + (c.unread_count || 0), 0);
+  const bar = document.getElementById('unreadBar');
+  const txt = document.getElementById('unreadBarText');
+  if(totalUnread > 0 && currentConvId === null){
+    bar.style.display = 'block';
+    txt.textContent = totalUnread + ' 条未读消息';
+  } else {
+    bar.style.display = 'none';
+  }
+}
+
+// Update global notification badge (in navbar)
+function updateNotifBadge(){
+  const totalUnread = conversations.reduce((sum, c) => sum + (c.unread_count || 0), 0);
+  const badge = document.getElementById('notifBadge');
+  if(totalUnread > 0){
+    badge.textContent = totalUnread > 99 ? '99+' : totalUnread;
+    badge.style.display = 'inline-block';
+  } else {
+    badge.style.display = 'none';
+  }
+  // Update page title
+  if(totalUnread > 0){
+    document.title = `(${totalUnread}) 即时通讯 - 星辰协同平台`;
+  } else {
+    document.title = '即时通讯 - 星辰协同平台';
+  }
+}
+
+function renderConversations(){
+  convListEl.innerHTML = '';
+  let filtered = showArchivedConvs ? conversations.filter(c => c.archived) : conversations.filter(c => !c.archived);
+  if(!filtered.length){
+    convListEl.innerHTML = '<div class="empty-state small py-4"><i class="bi bi-inbox" style="font-size:2rem"></i><p class="mt-2">' + (showArchivedConvs ? '暂无归档会话' : '暂无会话') + '</p></div>';
+    return;
+  }
+  filtered.sort((a,b) => {
+    const aTime = a.last_message_at || a.id;
+    const bTime = b.last_message_at || b.id;
+    return aTime < bTime ? 1 : aTime > bTime ? -1 : 0;
+  });
+  filtered.forEach(c => {
+    const div = document.createElement('div');
+    div.className = 'chat-item d-flex align-items-center gap-2 p-2' + (c.id === currentConvId ? ' active' : '');
+    div.dataset.id = c.id;
+
+    const isGroup = c.type === 'group';
+    let avatarContent;
+    if(isGroup){
+      const memberCount = c.participants?.length || 0;
+      avatarContent = `<div class="d-flex align-items-center justify-content-center position-relative" style="width:44px;height:44px;border-radius:50%;background:#f0e6ff;color:#7c3aed;font-size:1.2rem">
+        <i class="bi bi-people"></i>
+      </div>`;
+    } else {
+      const p = c.participants?.find(p => p.id !== CURRENT_USER?.id) || c.participants?.[0] || {};
+      avatarContent = `<div class="position-relative">
+        ${avatarHtml(p.avatar_url, p.display_name, 'avatar')}
+        <span class="status-dot ${p.online_status || 'offline'}" style="position:absolute;bottom:0;right:0"></span>
+      </div>`;
+    }
+
+    const tc = typeConfig[c.type] || typeConfig.direct;
+    const typeTag = `<span class="tag ${tc.cls}" style="font-size:.6rem;padding:1px 6px">${tc.tag}</span>`;
+    const memberBadge = isGroup && c.participants?.length ? `<span class="muted" style="font-size:.65rem">${c.participants.length}人</span>` : '';
+
+    div.innerHTML = `
+      <div class="position-relative" style="flex-shrink:0">
+        ${avatarContent}
+        ${c.unread_count > 0 ? `<span class="badge rounded-pill text-bg-danger position-absolute" style="top:-4px;right:-4px;font-size:.6rem;min-width:18px;height:18px;line-height:12px">${c.unread_count > 99 ? '99+' : c.unread_count}</span>` : ''}
+      </div>
+      <div style="flex:1;min-width:0">
+        <div class="d-flex justify-content-between align-items-center">
+          <div class="d-flex align-items-center gap-1" style="min-width:0">
+            <strong style="font-size:.88rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${c.title || '未命名'}</strong>
+            ${typeTag} ${memberBadge}
+            ${c.archived ? '<span class="tag tag-archived" style="font-size:.6rem">已归档</span>' : ''}
+          </div>
+          <div class="d-flex align-items-center gap-1" style="flex-shrink:0">
+            <span class="muted" style="font-size:.68rem">${c.last_message_at ? new Date(c.last_message_at).toLocaleTimeString('zh-CN', {hour:'2-digit',minute:'2-digit'}) : ''}</span>
+            ${CURRENT_USER ? `
+              <button class="btn btn-sm conv-archive-btn p-0" data-id="${c.id}" data-archived="${c.archived}" title="${c.archived ? '恢复' : '归档'}" style="font-size:.72rem;color:var(--muted);background:none;border:none;line-height:1">
+                <i class="bi ${c.archived ? 'bi-arrow-counterclockwise' : 'bi-archive'}"></i>
+              </button>
+            ` : ''}
+          </div>
+      </div>
+    `;
+    div.addEventListener('click', () => openConversation(c));
+    convListEl.appendChild(div);
+  });
+}
+
+// ===== Open Conversation =====
+async function openConversation(conv){
+  if(currentConvId === conv.id) return;
+  if(ws) { ws.close(); ws = null; }
+  clearTimeout(wsReconnectTimer);
+  currentConvId = conv.id;
+  currentConv = conv;
+  document.getElementById('chatPanel').style.display = 'flex';
+  document.getElementById('emptyPanel').style.display = 'none';
+  document.getElementById('unreadBar').style.display = 'none';
+  // Mobile: show chat panel as overlay
+  if(window.innerWidth <= 768) document.getElementById('chatPanel').classList.add('active-mobile');
+
+  // Update header with type info
+  const isGroup = conv.type === 'group';
+  document.getElementById('chatTitle').innerHTML = (conv.title || '会话') + (conv.archived ? ' <span class="tag tag-archived" style="font-size:.65rem">已归档</span>' : '');
+  const tc = typeConfig[conv.type] || typeConfig.direct;
+  const tag = document.getElementById('chatTypeTag');
+  tag.textContent = tc.tag;
+  tag.className = 'tag ' + tc.cls;
+  tag.style.display = 'inline-flex';
+
+  const memberCount = conv.participants?.length || 0;
+  if(isGroup){
+    const onlineCount = conv.participants?.filter(p => p.online_status === 'online').length || 0;
+    document.getElementById('chatMeta').textContent = `${memberCount} 名成员 · ${onlineCount} 在线`;
+  } else {
+    const peer = conv.participants?.find(p => p.id !== CURRENT_USER?.id) || conv.participants?.[0] || {};
+    const statusMap = {online:'在线', away:'忙碌', dnd:'勿扰', offline:'离线'};
+    document.getElementById('chatMeta').textContent = (statusMap[peer.online_status] || '离线') + ' · ' + (peer.display_name || peer.username);
+  }
+  document.getElementById('chatMembersBtn').style.display = isGroup ? 'inline-block' : 'none';
+  // Show AI robot button if group has the robot
+  const hasRobot = conv.participants?.some(p => p.display_name === '星辰AI助手' || p.username === 'ai_robot');
+  document.getElementById('aiRobotBtn').style.display = hasRobot ? 'inline-block' : 'none';
+  // Show archive/restore button (all participants can archive; restore uses backend permission check)
+  const archiveBtn = document.getElementById('archiveConvBtn');
+  archiveBtn.style.display = 'inline-block';
+  archiveBtn.innerHTML = conv.archived ? '<i class="bi bi-arrow-counterclockwise"></i>' : '<i class="bi bi-archive"></i>';
+  archiveBtn.title = conv.archived ? '恢复会话' : '归档会话';
+
+  // Mark as read
+  await fetch(`/api/conversations/${conv.id}/read/`, {method:'POST', credentials:'include'});
+
+  // Load messages
+  await loadMessages(conv.id);
+
+  // Connect WebSocket
+  connectWs(conv.id);
+
+  // Highlight in list
+  renderConversations();
+  updateNotifBadge();
+}
+
+function connectWs(convId){
+  try {
+    const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
+    ws = new WebSocket(`${proto}//${location.host}/ws/chat/${convId}/`);
+    ws.onopen = () => { console.log('WS connected for', convId); };
+    ws.onmessage = (e) => {
+      try {
+        const msg = JSON.parse(e.data);
+        if(currentConvId == convId){
+          if(msg.sender_id === CURRENT_USER?.id){
+            // Replace optimistic message with real data from server echo
+            updateOptimisticMessage(msg);
+          } else {
+            appendMessage(msg);
+          }
+          scrollToBottom();
+          fetch(`/api/conversations/${convId}/read/`, {method:'POST', credentials:'include'});
+        }
+        loadConversations();
+      } catch(err){ console.error('WS parse error:', err); }
+    };
+    ws.onclose = (e) => {
+      console.log('WS closed', e.code);
+      ws = null;
+      // Auto-reconnect after 3s if still viewing this conversation
+      if(currentConvId === convId){
+        wsReconnectTimer = setTimeout(() => connectWs(convId), 3000);
+      }
+    };
+    ws.onerror = (e) => { console.error('WS error'); ws?.close(); };
+  } catch(e){ console.error('WS connection error:', e); }
+}
+
+// ===== Load Messages =====
+async function loadMessages(convId){
+  try {
+    const r = await fetch(`/api/conversations/${convId}/messages/`, {credentials:'include'});
+    const data = await r.json();
+    allMessages = data.messages || [];
+    renderMessages();
+  } catch(e){ console.error(e); }
+}
+
+function renderMessages(){
+  msgListEl.innerHTML = '';
+  // Show date separators
+  let lastDate = '';
+  allMessages.forEach(m => {
+    const msgDate = new Date(m.created_at).toLocaleDateString('zh-CN');
+    if(msgDate !== lastDate){
+      lastDate = msgDate;
+      const sep = document.createElement('div');
+      sep.className = 'text-center muted small py-2';
+      const isToday = new Date().toLocaleDateString('zh-CN') === msgDate;
+      sep.textContent = isToday ? '今天' : msgDate;
+      msgListEl.appendChild(sep);
+    }
+    appendMessage(m);
+  });
+  scrollToBottom();
+}
+
+function appendMessage(msg){
+  const isMe = msg.sender_id === CURRENT_USER?.id;
+  const div = document.createElement('div');
+  div.className = 'd-flex mb-3 fade-in' + (isMe ? ' justify-content-end' : '');
+  div.dataset.msgId = msg.id;
+
+  const hasRevoked = msg.revoked_at;
+  let contentHtml = '';
+  if(hasRevoked){
+    contentHtml = '<em class="small muted" style="font-style:italic">' + (isMe ? '你撤回了一条消息' : '对方撤回了一条消息') + '</em>';
+  } else {
+    const rendered = typeof marked !== 'undefined' ? DOMPurify.sanitize(marked.parse(msg.content || '')) : escapeHtml(msg.content || '');
+    contentHtml = '<div class="md-content">' + rendered + '</div>';
+    if(msg.attachment_url){
+      const isImg = /\.(jpg|jpeg|png|gif|webp|bmp|svg)$/i.test(msg.attachment_url) || (msg.attachment_type && msg.attachment_type.startsWith('image/'));
+      if(isImg){
+        contentHtml += `<img src="${msg.attachment_url}" class="rounded-3 mt-1" style="max-width:280px;max-height:320px;cursor:pointer" onclick="previewImage('${msg.attachment_url}')" alt="">`;
+      } else {
+        contentHtml += `<a href="${msg.attachment_url}" target="_blank" class="d-block mt-1 p-2 rounded-3 text-decoration-none" style="background:var(--soft);border:1px solid var(--line)"><i class="bi bi-file-earmark me-1"></i>${msg.attachment_name || '文件'}</a>`;
+      }
+    }
+  }
+
+  if(!isMe){
+    div.innerHTML = `
+      <div class="d-flex gap-2" style="max-width:85%">
+        ${avatarHtml(msg.avatar_url, msg.display_name, 'avatar')}
+        <div>
+          <div class="mb-1 small muted">${msg.display_name}</div>
+          <div class="msg-bubble is-other" style="background:#fff;border:1px solid var(--line);box-shadow:0 1px 4px rgba(0,0,0,.04)">
+            ${contentHtml}
+            <div class="d-flex justify-content-between align-items-center mt-1">
+              <span style="font-size:.68rem;opacity:.65">${new Date(msg.created_at).toLocaleTimeString('zh-CN', {hour:'2-digit',minute:'2-digit'})}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+  } else {
+    div.innerHTML = `
+      <div style="max-width:75%">
+        <div class="msg-bubble is-me" style="background:linear-gradient(135deg,#1a73e8,#4a90d9);color:#fff">
+          ${contentHtml}
+          <div class="d-flex justify-content-between align-items-center mt-1">
+            <span style="font-size:.68rem;opacity:.7">${new Date(msg.created_at).toLocaleTimeString('zh-CN', {hour:'2-digit',minute:'2-digit'})}</span>
+            <span class="d-flex align-items-center" style="gap:4px">
+              ${!hasRevoked ? `<span style="font-size:.68rem;opacity:.7">${msg.is_read ? '已读' : '未读'}</span>` : ''}
+              ${isMe && !hasRevoked && (Date.now() - new Date(msg.created_at).getTime() < 120000) ? `<button class="btn btn-sm revoke-btn p-0" data-id="${msg.id}" style="font-size:.68rem;opacity:.7;color:#fff;background:none;border:none;text-decoration:underline">撤回</button>` : ''}
+            </span>
+          </div>
+        </div>
+      </div>
+    `;
+    div.querySelector('.revoke-btn')?.addEventListener('click', () => revokeMessage(msg.id));
+  }
+  msgListEl.appendChild(div);
+}
+
+function updateOptimisticMessage(realMsg){
+  // Find the last optimistic message (with temp_ id) and replace it with real server data
+  const tempEls = msgListEl.querySelectorAll('[data-msg-id^="temp_"]');
+  const tempEl = tempEls[tempEls.length - 1];
+  if(tempEl){
+    // Replace container's dataset and re-render
+    tempEl.dataset.msgId = realMsg.id;
+    // Re-create the message bubble with real data
+    const isMe = realMsg.sender_id === CURRENT_USER?.id;
+    const hasRevoked = realMsg.revoked_at;
+    let contentHtml = '';
+    if(hasRevoked){
+      contentHtml = '<em class="small muted" style="font-style:italic">' + (isMe ? '你撤回了一条消息' : '对方撤回了一条消息') + '</em>';
+    } else {
+      const rendered = typeof marked !== 'undefined' ? DOMPurify.sanitize(marked.parse(realMsg.content || '')) : escapeHtml(realMsg.content || '');
+      contentHtml = '<div class="md-content">' + rendered + '</div>';
+      if(realMsg.attachment_url){
+        const isImg = /\.(jpg|jpeg|png|gif|webp|bmp|svg)$/i.test(realMsg.attachment_url) || (realMsg.attachment_type && realMsg.attachment_type.startsWith('image/'));
+        if(isImg){
+          contentHtml += `<img src="${realMsg.attachment_url}" class="rounded-3 mt-1" style="max-width:280px;max-height:320px;cursor:pointer" onclick="previewImage('${realMsg.attachment_url}')" alt="">`;
+        } else {
+          contentHtml += `<a href="${realMsg.attachment_url}" target="_blank" class="d-block mt-1 p-2 rounded-3 text-decoration-none" style="background:var(--soft);border:1px solid var(--line)"><i class="bi bi-file-earmark me-1"></i>${realMsg.attachment_name || '文件'}</a>`;
+        }
+      }
+    }
+    const bubble = tempEl.querySelector(isMe ? '.msg-bubble.is-me' : '.msg-bubble.is-other') || tempEl.querySelector('.msg-bubble');
+    if(bubble && isMe){
+      bubble.innerHTML = contentHtml + `
+        <div class="d-flex justify-content-between align-items-center mt-1">
+          <span style="font-size:.68rem;opacity:.7">${new Date(realMsg.created_at).toLocaleTimeString('zh-CN', {hour:'2-digit',minute:'2-digit'})}</span>
+          <span class="d-flex align-items-center" style="gap:4px">
+            <span style="font-size:.68rem;opacity:.7">${realMsg.is_read ? '已读' : '未读'}</span>
+            ${!hasRevoked && (Date.now() - new Date(realMsg.created_at).getTime() < 120000) ? `<button class="btn btn-sm revoke-btn p-0" data-id="${realMsg.id}" style="font-size:.68rem;opacity:.7;color:#fff;background:none;border:none;text-decoration:underline">撤回</button>` : ''}
+          </span>
+        </div>
+      `;
+      bubble.querySelector('.revoke-btn')?.addEventListener('click', () => revokeMessage(realMsg.id));
+    }
+  }
+}
+
+function scrollToBottom(){
+  const container = document.getElementById('msgContainer');
+  requestAnimationFrame(() => { container.scrollTop = container.scrollHeight; });
+}
+
+// ===== Send Message =====
+// AI Robot button — insert @星辰AI助手 into input on click
+document.getElementById('aiRobotBtn').addEventListener('click', () => {
+  const input = document.getElementById('msgInput');
+  input.value = '@星辰AI助手 ';
+  input.focus();
+  // Trigger auto-resize
+  input.style.height = 'auto';
+  input.style.height = Math.min(input.scrollHeight, 120) + 'px';
+});
+
+document.getElementById('sendBtn').addEventListener('click', sendMessage);
+document.getElementById('msgInput').addEventListener('keydown', (e) => {
+  if(e.key === 'Enter' && !e.shiftKey){
+    e.preventDefault();
+    sendMessage();
+  }
+});
+
+async function sendMessage(){
+  if(!currentConvId) return;
+  const input = document.getElementById('msgInput');
+  const content = input.value.trim();
+  if(!content && !pendingFile) return;
+
+  let attachmentUrl = '', attachmentName = '', attachmentType = '';
+
+  // Upload pending file first
+  if(pendingFile) {
+    const fd = new FormData();
+    fd.append('file', pendingFile);
+    try {
+      const uploadResp = await fetch(`/api/conversations/${currentConvId}/messages/send/`, {
+        method:'POST', credentials:'include', body: fd
+      });
+      if(uploadResp.ok) {
+        const uploadData = await uploadResp.json();
+        attachmentUrl = uploadData.attachment_url || '';
+        attachmentName = uploadData.attachment_name || '';
+        attachmentType = uploadData.attachment_type || '';
+      } else {
+        showToast('文件上传失败', 'danger');
+        return;
+      }
+    } catch(e) {
+      showToast('文件上传失败', 'danger');
+      return;
+    }
+    // Clear pending state
+    pendingFile = null;
+    document.getElementById('pendingFile').style.display = 'none';
+    document.getElementById('pendingFileName').textContent = '';
+  }
+
+  // Auto-resize textarea
+  input.style.height = 'auto';
+
+  if(ws && ws.readyState === WebSocket.OPEN){
+    ws.send(JSON.stringify({
+      content,
+      attachment_url: attachmentUrl,
+      attachment_name: attachmentName,
+      attachment_type: attachmentType,
+    }));
+    // Optimistic: show message immediately
+    const tempMsg = {
+      id: 'temp_' + Date.now(),
+      sender: CURRENT_USER.username,
+      sender_id: CURRENT_USER.id,
+      display_name: CURRENT_USER.display_name || CURRENT_USER.username,
+      avatar_url: CURRENT_USER.avatar_url || '/static/avater.jpeg',
+      content: content,
+      attachment_url: attachmentUrl,
+      attachment_name: attachmentName,
+      attachment_type: attachmentType,
+      created_at: new Date().toISOString(),
+      is_read: true,
+      revoked_at: null,
+    };
+    appendMessage(tempMsg);
+    scrollToBottom();
+    input.value = '';
+  } else {
+    // Fallback to REST
+    try {
+      const r = await fetch(`/api/conversations/${currentConvId}/messages/send/`, {
+        method:'POST', headers:{'Content-Type':'application/json'}, credentials:'include',
+        body: JSON.stringify({content, attachment_url: attachmentUrl, attachment_name: attachmentName, attachment_type: attachmentType})
+      });
+      if(r.ok){
+        input.value = '';
+        const msg = await r.json();
+        appendMessage(msg);
+        scrollToBottom();
+      } else {
+        showToast('发送失败', 'danger');
+      }
+    } catch(e){
+      showToast('发送失败，请重试', 'danger');
+    }
+    setTimeout(loadConversations, 300);
+  }
+}
+
+// ===== Auto-resize textarea =====
+document.getElementById('msgInput').addEventListener('input', function(){
+  this.style.height = 'auto';
+  this.style.height = Math.min(this.scrollHeight, 120) + 'px';
+});
+
+// ===== File Upload (pending, send with message) =====
+let pendingFile = null;
+
+document.getElementById('fileInput').addEventListener('change', (e) => {
+  if(!e.target.files.length) return;
+  pendingFile = e.target.files[0];
+  const nameEl = document.getElementById('pendingFileName');
+  nameEl.textContent = pendingFile.name;
+  document.getElementById('pendingFile').style.display = 'flex';
+  e.target.value = '';
+});
+
+document.getElementById('clearPendingFileBtn').addEventListener('click', () => {
+  pendingFile = null;
+  document.getElementById('pendingFile').style.display = 'none';
+  document.getElementById('pendingFileName').textContent = '';
+});
+
+// ===== Revoke Message =====
+async function revokeMessage(msgId){
+  if(!confirm('确定撤回该消息？')) return;
+  try {
+    const r = await fetch(`/api/conversations/${currentConvId}/messages/${msgId}/revoke/`, {
+      method:'POST', credentials:'include'
+    });
+    if(!r.ok){
+      const data = await r.json();
+      showToast(data.detail || '撤回失败', 'warning');
+      return;
+    }
+    showToast('消息已撤回');
+    await loadMessages(currentConvId);
+    setTimeout(loadConversations, 300);
+  } catch(e){
+    showToast('撤回失败', 'danger');
+  }
+}
+
+// ===== Archive/Restore Conversation (header button) =====
+document.getElementById('archiveConvBtn').addEventListener('click', async () => {
+  if(!currentConvId || !currentConv) return;
+  if(!currentConv.archived && !confirm('确定归档该会话？归档后可从归档列表恢复。')) return;
+  await toggleArchiveConv(currentConvId, !currentConv.archived);
+});
+
+// Archive buttons in conversation list
+document.addEventListener('click', async (e) => {
+  const btn = e.target.closest('.conv-archive-btn');
+  if(!btn) return;
+  e.stopPropagation();
+  e.preventDefault();
+  const convId = parseInt(btn.dataset.id);
+  const isArchived = btn.dataset.archived === 'true';
+  if(!isArchived && !confirm('确定归档该会话？归档后可从归档列表恢复。')) return;
+  await toggleArchiveConv(convId, !isArchived);
+});
+
+async function toggleArchiveConv(convId, archive){
+  try {
+    const url = archive ? `/api/conversations/${convId}/archive/` : `/api/conversations/${convId}/restore/`;
+    const r = await fetch(url, {
+      method:'POST', headers:{'Content-Type':'application/json'}, credentials:'include',
+      body: JSON.stringify({archived: archive})
+    });
+    const data = await r.json();
+    if(!r.ok){ showToast(data.detail || '操作失败', 'danger'); return; }
+    showToast(archive ? '会话已归档' : '会话已恢复', 'success');
+    if(currentConvId === convId) {
+      if(ws) { ws.close(); ws = null; }
+      clearTimeout(wsReconnectTimer);
+      currentConvId = null;
+      currentConv = null;
+      document.getElementById('chatPanel').style.display = 'none';
+      document.getElementById('emptyPanel').style.display = 'flex';
+    }
+    loadConversations();
+    updateNotifBadge();
+  } catch(e){ showToast('操作失败', 'danger'); }
+}
+
+// ===== Delete Conversation =====
+document.getElementById('deleteConvBtn').addEventListener('click', async () => {
+  if(!currentConvId || !confirm('确定删除该会话？删除后不可恢复。')) return;
+  try {
+    const r = await fetch(`/api/conversations/${currentConvId}/delete/`, {
+      method:'POST', credentials:'include'
+    });
+    if(!r.ok){ showToast('删除失败', 'danger'); return; }
+    showToast('会话已删除');
+    if(ws) { ws.close(); ws = null; }
+    clearTimeout(wsReconnectTimer);
+    currentConvId = null;
+    currentConv = null;
+    document.getElementById('chatPanel').style.display = 'none';
+    document.getElementById('emptyPanel').style.display = 'flex';
+    loadConversations();
+    updateNotifBadge();
+  } catch(e){ showToast('删除失败', 'danger'); }
+});
+
+// ===== Back to List (mobile) =====
+document.getElementById('backToListBtn').addEventListener('click', () => {
+  document.getElementById('chatPanel').style.display = 'none';
+  document.getElementById('chatPanel').classList.remove('active-mobile');
+  document.getElementById('emptyPanel').style.display = 'flex';
+});
+
+// ===== Members Management =====
+document.getElementById('chatMembersBtn').addEventListener('click', async () => {
+  if(!currentConv) return;
+  const conv = conversations.find(c => c.id === currentConvId);
+  if(!conv) return;
+  // Reset invite search state
+  invitedUserIds = new Set();
+  const resultsContainer = document.getElementById('inviteSearchResults');
+  if(resultsContainer){ resultsContainer.style.display = 'none'; resultsContainer.innerHTML = ''; }
+  document.getElementById('inviteMemberSearch').value = '';
+  const body = document.getElementById('membersModalBody');
+  body.innerHTML = `<div class="small muted mb-2">成员列表 (${conv.participants?.length || 0}人)</div>`;
+  const members = conv.participants || [];
+  members.forEach(p => {
+    const isOwner = CURRENT_USER?.id === p.id;
+    const statusMap = {online:'在线', away:'忙碌', dnd:'勿扰', offline:'离线'};
+    const d = document.createElement('div');
+    d.className = 'd-flex align-items-center justify-content-between p-2 border-bottom';
+    d.innerHTML = `
+      <div class="d-flex align-items-center gap-2">
+        ${avatarHtml(p.avatar_url, p.display_name, 'avatar')}
+        <div>
+          <div class="fw-medium" style="font-size:.9rem">${p.display_name || p.username} ${isOwner ? '<span class="badge text-bg-primary ms-1" style="font-size:.6rem">我</span>' : ''}</div>
+          <div class="d-flex align-items-center gap-1 muted" style="font-size:.75rem">
+            <span class="status-dot ${p.online_status || 'offline'}"></span>${statusMap[p.online_status] || '离线'}
+          </div>
+        </div>
+      </div>
+      ${!isOwner ? `<button class="btn btn-sm btn-outline-danger remove-member-btn" data-id="${p.id}" style="border-radius:999px;font-size:.75rem">移除</button>` : ''}
+    `;
+    body.appendChild(d);
+  });
+  document.querySelectorAll('.remove-member-btn').forEach(b => {
+    b.addEventListener('click', async () => {
+      if(!confirm('确定移除该成员？')) return;
+      const r = await fetch(`/api/conversations/${currentConvId}/members/`, {
+        method:'POST', headers:{'Content-Type':'application/json'}, credentials:'include',
+        body: JSON.stringify({action:'remove', user_id: parseInt(b.dataset.id)})
+      });
+      if(!r.ok){ showToast('移除失败', 'danger'); return; }
+      showToast('成员已移除');
+      document.getElementById('chatMembersBtn').click();
+      loadConversations();
+    });
+  });
+  new bootstrap.Modal(document.getElementById('membersModal')).show();
+});
+
+// ===== Invite Members (search → confirm → invite) =====
+let invitedUserIds = new Set();
+
+document.getElementById('inviteMemberSearchBtn').addEventListener('click', async () => {
+  const q = document.getElementById('inviteMemberSearch').value.trim();
+  if(!q || q.length < 1) return;
+  const r = await fetch(`/api/users/search/?q=${encodeURIComponent(q)}`, {credentials:'include'});
+  const data = await r.json();
+  const conv = conversations.find(c => c.id === currentConvId);
+  const existingIds = new Set((conv?.participants || []).map(p => p.id));
+  const results = (data.users || []).filter(u => !existingIds.has(u.id));
+
+  const container = document.getElementById('inviteSearchResults');
+  if(!results.length){
+    container.style.display = 'block';
+    container.innerHTML = '<div class="muted small text-center py-2">未找到可添加的用户</div>';
+    return;
+  }
+  container.style.display = 'block';
+  container.innerHTML = '<div class="small fw-medium mb-1" style="color:var(--muted)">搜索结果</div>' +
+    results.map(u => {
+      const alreadyInvited = invitedUserIds.has(u.id);
+      return `<div class="d-flex align-items-center justify-content-between p-2 border-bottom">
+        <span><img src="${u.avatar_url || '/static/avater.jpeg'}" class="avatar-sm me-2">${u.display_name || u.username}${u.organization ? '<span class="muted small ms-2">' + u.organization + '</span>' : ''}</span>
+        <button class="btn btn-sm invite-confirm-btn" data-id="${u.id}" data-name="${u.display_name || u.username}"
+          style="border-radius:999px;font-size:.75rem;${alreadyInvited ? 'background:#eef2f6;color:#94a3b8;cursor:default;border:1px solid #e2e8f0' : 'background:var(--brand-soft);color:var(--brand);border:none'}" ${alreadyInvited ? 'disabled' : ''}>
+          ${alreadyInvited ? '<i class="bi bi-check-lg me-1"></i>已邀请' : '<i class="bi bi-person-plus me-1"></i>邀请'}
+        </button>
+      </div>`;
+    }).join('');
+
+  container.querySelectorAll('.invite-confirm-btn:not([disabled])').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const userId = parseInt(btn.dataset.id);
+      const userName = btn.dataset.name;
+      const res = await fetch(`/api/conversations/${currentConvId}/members/`, {
+        method:'POST', headers:{'Content-Type':'application/json'}, credentials:'include',
+        body: JSON.stringify({action:'invite', user_id: userId})
+      });
+      if(!res.ok){ showToast('邀请失败', 'danger'); return; }
+      invitedUserIds.add(userId);
+      showToast(`已邀请 ${userName}`);
+      // Update button state
+      btn.innerHTML = '<i class="bi bi-check-lg me-1"></i>已邀请';
+      btn.style.background = '#eef2f6';
+      btn.style.color = '#94a3b8';
+      btn.style.cursor = 'default';
+      btn.style.border = '1px solid #e2e8f0';
+      btn.disabled = true;
+      loadConversations();
+    });
+  });
+});
+
+// Enter key triggers search
+document.getElementById('inviteMemberSearch').addEventListener('keydown', e => {
+  if(e.key === 'Enter') document.getElementById('inviteMemberSearchBtn').click();
+});
+
+// ===== Image Preview =====
+function previewImage(url){
+  document.getElementById('imagePreviewTarget').src = url;
+  new bootstrap.Modal(document.getElementById('imagePreviewModal')).show();
+}
+
+// ===== Utility =====
+function escapeHtml(text){
+  const d = document.createElement('div');
+  d.textContent = text;
+  return d.innerHTML;
+}
+
+// ===== Notification Polling =====
+let notifPollTimer = null;
+
+async function pollNotifications(){
+  try {
+    const r = await fetch('/api/friends/', {credentials:'include'});
+    const data = await r.json();
+    const pendingCount = (data.pending_requests || []).length;
+    const badge = document.getElementById('notifBadge');
+    const notifDot = document.getElementById('notifCountLabel');
+
+    // Update friend request badge + notification list
+    if(pendingCount > 0){
+      notifDot.textContent = pendingCount;
+      showFriendRequestNotifs(data.pending_requests);
+    } else {
+      notifDot.textContent = '0';
+      const notifList = document.getElementById('notifList');
+      if(!notifList.querySelector('.notif-item')){
+        notifList.innerHTML = '<div class="empty-state small py-3"><i class="bi bi-bell-slash" style="font-size:1.5rem"></i><p class="mt-1">暂无通知</p></div>';
+      }
+    }
+
+    // Add friend requests to notification dropdown
+    function showFriendRequestNotifs(requests){
+      const notifList = document.getElementById('notifList');
+      let html = '';
+      requests.forEach(r => {
+        html += `
+          <div class="notif-item">
+            <span class="notif-dot"></span>
+            <div style="flex:1;min-width:0">
+              <div class="fw-medium" style="font-size:.82rem">好友申请</div>
+              <div class="muted" style="font-size:.75rem">${r.display_name || r.sender} 请求添加好友</div>
+            </div>
+            <a href="/friends/" class="btn btn-sm btn-outline-primary" style="border-radius:999px;font-size:.72rem;padding:2px 10px">处理</a>
+          </div>
+        `;
+      });
+      if(html) notifList.innerHTML = html;
+    }
+  } catch(e){ /* silent */ }
+}
+
+// ===== Toggle Archived Conversations =====
+document.getElementById('showArchivedConvsBtn').addEventListener('click', () => {
+  showArchivedConvs = !showArchivedConvs;
+  document.getElementById('archivedConvLabel').textContent = showArchivedConvs ? '活跃会话' : '归档会话';
+  loadConversations();
+});
+
+// ===== Init =====
+async function initChat(){
+  await loadCurrentUser();
+  await loadConversations();
+
+  // Start notification polling (every 30s)
+  pollNotifications();
+  notifPollTimer = setInterval(pollNotifications, 30000);
+
+  // Check URL for direct conversation open
+  const params = new URLSearchParams(location.search);
+  const convId = params.get('conv');
+  if(convId){
+    const conv = conversations.find(c => c.id === parseInt(convId));
+    if(conv) openConversation(conv);
+    else {
+      const r = await fetch('/api/conversations/', {credentials:'include'});
+      const data = await r.json();
+      conversations = data.conversations || [];
+      const found = conversations.find(c => c.id === parseInt(convId));
+      if(found) openConversation(found);
+    }
+  }
+}
+
+document.addEventListener('DOMContentLoaded', initChat);
+</script>
+{% endblock %}

@@ -1,0 +1,404 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}个人中心 - 星辰协同平台{% endblock %}
+{% block page_title %}个人中心{% endblock %}
+
+{% block extra_head %}
+<style>
+.crop-area{position:relative;width:100%;max-width:400px;margin:0 auto;overflow:hidden;border-radius:12px;background:#f3f4f6}
+.crop-area img{width:100%;display:block}
+.crop-overlay{position:absolute;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.45)}
+.crop-frame{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:200px;height:200px;border-radius:50%;border:3px solid #fff;box-shadow:0 0 0 9999px rgba(0,0,0,.45);cursor:move}
+.crop-handle{position:absolute;bottom:-8px;right:-8px;width:20px;height:20px;border-radius:50%;background:#fff;border:2px solid var(--brand);cursor:nw-resize}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="app-content-header">
+  <div class="container-fluid">
+    <div class="muted" style="font-size:.9rem">管理个人信息、头像、在线状态和账号安全</div>
+  </div>
+</div>
+<div class="app-content page-content">
+<div class="container-fluid">
+  <div class="row g-4" style="max-width:900px;margin:0 auto">
+
+    <!-- Profile Card -->
+    <div class="col-lg-4">
+      <div class="card text-center p-4 border-0 shadow-sm">
+        <div class="position-relative d-inline-block mx-auto mb-3">
+          <img id="profileAvatar" src="/static/avater.jpeg" class="avatar-xl" style="width:100px;height:100px;border:4px solid #fff;box-shadow:0 8px 25px rgba(0,0,0,.1);border-radius:50%" onerror="this.src='/static/avater.jpeg'" alt="">
+          <label class="position-absolute bottom-0 end-0 btn btn-sm btn-primary rounded-circle p-1 shadow" style="cursor:pointer;width:32px;height:32px;display:flex;align-items:center;justify-content:center" title="更换头像">
+            <i class="bi bi-camera" style="font-size:.75rem"></i>
+            <input type="file" id="avatarUploadInput" accept="image/*" style="display:none">
+          </label>
+        </div>
+        <h5 class="fw-bold mb-1" id="pDisplayName">-</h5>
+        <div class="muted small mb-1" id="pUsername">@-</div>
+        <div class="muted small mb-1" id="pPhone" style="font-size:.82rem"><i class="bi bi-phone me-1"></i><span>-</span></div>
+        <div class="muted small mb-2" id="pOrg" style="font-size:.82rem"><i class="bi bi-building me-1"></i><span>-</span></div>
+        <div class="muted small mb-3" id="pBio"></div>
+        <div class="d-flex justify-content-center gap-2 mb-2">
+          <span class="badge rounded-pill text-bg-light" id="pStatus">在线</span>
+        </div>
+        <button class="btn btn-outline-primary btn-sm w-100" id="editProfileBtn" data-bs-toggle="modal" data-bs-target="#editProfileModal" style="border-radius:999px">
+          <i class="bi bi-pencil me-1"></i>编辑资料
+        </button>
+      </div>
+    </div>
+
+    <!-- Settings -->
+    <div class="col-lg-8">
+      <!-- Status Setting -->
+      <div class="card mb-3 border-0 shadow-sm">
+        <div class="card-header px-4 py-3">
+          <span class="fw-bold"><i class="bi bi-circle me-2" style="color:var(--brand)"></i>在线状态</span>
+        </div>
+        <div class="card-body px-4 py-3">
+          <div class="d-flex flex-wrap gap-2">
+            <button class="btn status-btn active" data-status="online" style="border-radius:999px;border:2px solid transparent">
+              <span class="status-dot online me-1"></span>在线
+            </button>
+            <button class="btn status-btn" data-status="away" style="border-radius:999px;border:2px solid transparent">
+              <span class="status-dot away me-1"></span>忙碌
+            </button>
+            <button class="btn status-btn" data-status="dnd" style="border-radius:999px;border:2px solid transparent">
+              <span class="status-dot dnd me-1"></span>请勿打扰
+            </button>
+            <button class="btn status-btn" data-status="offline" style="border-radius:999px;border:2px solid transparent">
+              <span class="status-dot offline me-1"></span>离线
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Account Security -->
+      <div class="card mb-3 border-0 shadow-sm">
+        <div class="card-header px-4 py-3">
+          <span class="fw-bold"><i class="bi bi-shield-lock me-2" style="color:var(--brand)"></i>账号与安全</span>
+        </div>
+        <div class="card-body px-4 py-3">
+          <div class="d-flex justify-content-between align-items-center mb-2">
+            <div><div class="fw-medium">修改密码</div><div class="muted small">定期更换密码保障账号安全</div></div>
+            <button class="btn btn-outline-primary btn-sm" data-bs-toggle="modal" data-bs-target="#passwordModal" style="border-radius:999px">修改</button>
+          </div>
+          <hr class="my-2">
+          <div class="d-flex justify-content-between align-items-center">
+            <div><div class="fw-medium">账号信息</div><div class="muted small">用户名不可更改</div></div>
+            <div><span class="muted small" id="pAccountName">-</span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Notification Settings -->
+      <div class="card border-0 shadow-sm">
+        <div class="card-header px-4 py-3">
+          <span class="fw-bold"><i class="bi bi-bell me-2" style="color:var(--brand)"></i>通知设置</span>
+        </div>
+        <div class="card-body px-4 py-3">
+          <div class="d-flex justify-content-between align-items-center mb-2">
+            <div><div class="fw-medium">消息通知</div><div class="muted small">接收新消息提醒</div></div>
+            <div class="form-check form-switch"><input class="form-check-input" type="checkbox" checked id="notifSwitch"></div>
+          </div>
+          <hr class="my-2">
+          <div class="d-flex justify-content-between align-items-center mb-2">
+            <div><div class="fw-medium">好友申请通知</div><div class="muted small">收到好友申请时提醒</div></div>
+            <div class="form-check form-switch"><input class="form-check-input" type="checkbox" checked id="friendNotifSwitch"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- Edit Profile Modal -->
+<div class="modal fade" id="editProfileModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content" style="border-radius:12px;border:none">
+      <div class="modal-header border-0 pb-0">
+        <h5 class="fw-bold">编辑资料</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div class="mb-3">
+          <label class="form-label small fw-medium">昵称</label>
+          <input class="form-control" id="editDisplayName" style="border-radius:10px">
+        </div>
+        <div class="mb-3">
+          <label class="form-label small fw-medium">个人简介</label>
+          <textarea class="form-control" id="editBio" rows="3" style="border-radius:10px"></textarea>
+        </div>
+      </div>
+      <div class="modal-footer border-0 pt-0">
+        <button class="btn btn-secondary" data-bs-dismiss="modal" style="border-radius:10px">取消</button>
+        <button class="btn btn-primary" id="saveProfileBtn" style="border-radius:10px">保存</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Password Modal -->
+<div class="modal fade" id="passwordModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content" style="border-radius:12px;border:none">
+      <div class="modal-header border-0 pb-0">
+        <h5 class="fw-bold">修改密码</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div class="mb-3">
+          <label class="form-label small fw-medium">原密码</label>
+          <input type="password" class="form-control" id="oldPassword" style="border-radius:10px">
+        </div>
+        <div class="mb-3">
+          <label class="form-label small fw-medium">新密码</label>
+          <input type="password" class="form-control" id="newPassword" style="border-radius:10px" placeholder="至少6位">
+        </div>
+      </div>
+      <div class="modal-footer border-0 pt-0">
+        <button class="btn btn-secondary" data-bs-dismiss="modal" style="border-radius:10px">取消</button>
+        <button class="btn btn-primary" id="savePasswordBtn" style="border-radius:10px">确认修改</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Avatar Crop Modal -->
+<div class="modal fade" id="cropModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content" style="border-radius:12px;border:none">
+      <div class="modal-header border-0 pb-0">
+        <h5 class="fw-bold">裁剪头像</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body p-3">
+        <div class="crop-area" id="cropArea">
+          <img id="cropImage" src="" alt="">
+          <div class="crop-overlay" id="cropOverlay">
+            <div class="crop-frame" id="cropFrame">
+              <div class="crop-handle" id="cropHandle"></div>
+            </div>
+          </div>
+        </div>
+        <p class="muted small text-center mt-2">拖拽或缩放裁剪区域，选择头像范围</p>
+      </div>
+      <div class="modal-footer border-0 pt-0">
+        <button class="btn btn-secondary" data-bs-dismiss="modal" style="border-radius:10px">取消</button>
+        <button class="btn btn-primary" id="cropConfirmBtn" style="border-radius:10px">确认上传</button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+// ===== Load Profile =====
+let userData = null;
+
+async function loadProfile(){
+  if(!CURRENT_USER){
+    await loadCurrentUser();
+  }
+  userData = CURRENT_USER;
+  if(!userData) return;
+  updateProfileUI(userData);
+}
+
+function updateProfileUI(u){
+  const avatarSrc = u.avatar_url || '/static/avater.jpeg';
+  document.getElementById('profileAvatar').src = avatarSrc;
+  document.getElementById('pDisplayName').textContent = u.display_name || u.username;
+  document.getElementById('pUsername').textContent = '@' + u.username;
+  document.getElementById('pPhone').querySelector('span').textContent = u.phone || '未绑定';
+  document.getElementById('pOrg').querySelector('span').textContent = u.organization || '未设置';
+  document.getElementById('pBio').textContent = u.bio || '暂无简介';
+  document.getElementById('pAccountName').textContent = u.username;
+  document.getElementById('editDisplayName').value = u.display_name || '';
+  document.getElementById('editBio').value = u.bio || '';
+
+  const statusMap = {online:'在线', away:'忙碌', dnd:'请勿打扰', offline:'离线'};
+  document.getElementById('pStatus').textContent = statusMap[u.online_status] || '在线';
+
+  // Status buttons
+  document.querySelectorAll('.status-btn').forEach(b => {
+    b.classList.remove('btn-primary', 'btn-outline-secondary');
+    if(b.dataset.status === (u.online_status || 'offline')){
+      b.classList.add('btn-primary');
+    } else {
+      b.classList.add('btn-outline-secondary');
+    }
+  });
+}
+
+// ===== Status Change =====
+document.querySelectorAll('.status-btn').forEach(b => {
+  b.addEventListener('click', async () => {
+    const status = b.dataset.status;
+    const r = await fetch('/api/profile/status/', {
+      method:'POST', headers:{'Content-Type':'application/json'}, credentials:'include',
+      body: JSON.stringify({status})
+    });
+    if(!r.ok){ showToast('状态更新失败', 'danger'); return; }
+    showToast('状态已更新');
+    userData.online_status = status;
+    updateProfileUI(userData);
+    if(CURRENT_USER){
+      CURRENT_USER.online_status = status;
+      const dot = document.getElementById('navStatusDot');
+      dot.className = 'status-dot ' + status;
+      document.getElementById('ddStatus').textContent = document.querySelector('.status-btn.btn-primary')?.textContent?.trim() || '在线';
+    }
+  });
+});
+
+// ===== Edit Profile =====
+document.getElementById('saveProfileBtn').addEventListener('click', async () => {
+  const displayName = document.getElementById('editDisplayName').value.trim();
+  const bio = document.getElementById('editBio').value.trim();
+  const r = await fetch('/api/profile/update/', {
+    method:'POST', headers:{'Content-Type':'application/json'}, credentials:'include',
+    body: JSON.stringify({display_name: displayName, bio})
+  });
+  if(!r.ok){ showToast('保存失败', 'danger'); return; }
+  showToast('资料已更新');
+  bootstrap.Modal.getInstance(document.getElementById('editProfileModal')).hide();
+  const data = await r.json();
+  if(CURRENT_USER) Object.assign(CURRENT_USER, data);
+  updateProfileUI(data);
+});
+
+// ===== Password Change =====
+document.getElementById('savePasswordBtn').addEventListener('click', async () => {
+  const oldPw = document.getElementById('oldPassword').value;
+  const newPw = document.getElementById('newPassword').value;
+  if(!oldPw || !newPw){ showToast('请填写完整', 'warning'); return; }
+  if(newPw.length < 6){ showToast('新密码至少6位', 'warning'); return; }
+  const r = await fetch('/api/profile/password/', {
+    method:'POST', headers:{'Content-Type':'application/json'}, credentials:'include',
+    body: JSON.stringify({old_password: oldPw, new_password: newPw})
+  });
+  const data = await r.json();
+  if(!r.ok){ showToast(data.detail || '修改失败', 'danger'); return; }
+  showToast('密码修改成功');
+  bootstrap.Modal.getInstance(document.getElementById('passwordModal')).hide();
+  document.getElementById('oldPassword').value = '';
+  document.getElementById('newPassword').value = '';
+});
+
+// ===== Avatar Crop & Upload =====
+let cropData = {x:0, y:0, size:200, imgW:0, imgH:0};
+let isDragging = false, isResizing = false;
+let dragStartX, dragStartY, startX, startY, startSize;
+
+document.getElementById('avatarUploadInput').addEventListener('change', function(e){
+  const file = e.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = (ev) => {
+    const img = document.getElementById('cropImage');
+    img.onload = () => {
+      cropData.imgW = img.naturalWidth;
+      cropData.imgH = img.naturalHeight;
+      const area = document.getElementById('cropArea');
+      const maxSize = Math.min(img.naturalWidth, img.naturalHeight, 300);
+      cropData.size = maxSize;
+      cropData.x = (img.naturalWidth - maxSize) / 2;
+      cropData.y = (img.naturalHeight - maxSize) / 2;
+      updateCropFrame();
+    };
+    img.src = ev.target.result;
+    new bootstrap.Modal(document.getElementById('cropModal')).show();
+  };
+  reader.readAsDataURL(file);
+  this.value = '';
+});
+
+function updateCropFrame(){
+  const img = document.getElementById('cropImage');
+  const frame = document.getElementById('cropFrame');
+  const ratioX = img.clientWidth / cropData.imgW;
+  const ratioY = img.clientHeight / cropData.imgH;
+  const left = cropData.x * ratioX;
+  const top = cropData.y * ratioY;
+  const size = cropData.size * ratioX;
+  frame.style.left = left + 'px';
+  frame.style.top = top + 'px';
+  frame.style.width = size + 'px';
+  frame.style.height = size + 'px';
+}
+
+document.getElementById('cropOverlay').addEventListener('mousedown', (e) => {
+  const frame = document.getElementById('cropFrame');
+  if(e.target === frame || e.target.classList.contains('crop-handle')) return;
+  if(e.target === document.getElementById('cropOverlay') || e.target === document.getElementById('cropArea')){
+    isDragging = true;
+    const rect = frame.getBoundingClientRect();
+    dragStartX = e.clientX;
+    dragStartY = e.clientY;
+    startX = cropData.x;
+    startY = cropData.y;
+  }
+});
+
+document.addEventListener('mousemove', (e) => {
+  const img = document.getElementById('cropImage');
+  const ratio = cropData.imgW / img.clientWidth;
+  if(isDragging){
+    const dx = (e.clientX - dragStartX) * ratio;
+    const dy = (e.clientY - dragStartY) * ratio;
+    cropData.x = Math.max(0, Math.min(cropData.imgW - cropData.size, startX + dx));
+    cropData.y = Math.max(0, Math.min(cropData.imgH - cropData.size, startY + dy));
+    updateCropFrame();
+  }
+  if(isResizing){
+    const dx = (e.clientX - dragStartX) * ratio;
+    const dy = (e.clientY - dragStartY) * ratio;
+    const newSize = Math.max(50, Math.min(Math.min(cropData.imgW, cropData.imgH), startSize + Math.max(dx, dy)));
+    cropData.size = newSize;
+    cropData.x = Math.max(0, Math.min(cropData.imgW - newSize, cropData.x));
+    cropData.y = Math.max(0, Math.min(cropData.imgH - newSize, cropData.y));
+    updateCropFrame();
+  }
+});
+
+document.addEventListener('mouseup', () => { isDragging = false; isResizing = false; });
+
+document.getElementById('cropHandle').addEventListener('mousedown', (e) => {
+  e.stopPropagation();
+  isResizing = true;
+  dragStartX = e.clientX;
+  dragStartY = e.clientY;
+  startSize = cropData.size;
+});
+
+document.getElementById('cropConfirmBtn').addEventListener('click', async () => {
+  const img = document.getElementById('cropImage');
+  const canvas = document.createElement('canvas');
+  canvas.width = 400;
+  canvas.height = 400;
+  const ctx = canvas.getContext('2d');
+  ctx.drawImage(img, cropData.x, cropData.y, cropData.size, cropData.size, 0, 0, 400, 400);
+
+  canvas.toBlob(async (blob) => {
+    const fd = new FormData();
+    fd.append('avatar', blob, 'avatar.jpg');
+    const r = await fetch('/api/profile/avatar/', {
+      method:'POST', credentials:'include', body: fd
+    });
+    const data = await r.json();
+    if(!r.ok){ showToast('上传失败', 'danger'); return; }
+    showToast('头像已更新');
+    bootstrap.Modal.getInstance(document.getElementById('cropModal')).hide();
+    document.querySelectorAll('#profileAvatar, #navAvatar, #ddAvatar').forEach(el => {
+      el.src = data.avatar_url + '?t=' + Date.now();
+    });
+    if(CURRENT_USER) CURRENT_USER.avatar_url = data.avatar_url;
+  }, 'image/jpeg', 0.92);
+});
+
+// ===== Init =====
+document.addEventListener('DOMContentLoaded', loadProfile);
+</script>
+{% endblock %}

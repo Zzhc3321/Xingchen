@@ -1,0 +1,554 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}事件中心 - 星辰协同平台{% endblock %}
+{% block page_title %}事件中心{% endblock %}
+
+{% block extra_head %}
+<style>
+@media (max-width: 768px) {
+  .events-filter-bar { flex-wrap: nowrap; overflow-x: auto; -webkit-overflow-scrolling: touch; gap: 4px !important; padding-bottom: 4px; }
+  .events-filter-bar .cat-btn { white-space: nowrap; font-size: .75rem; padding: 4px 10px; flex-shrink: 0; }
+  .events-action-bar { flex-wrap: wrap; gap: 6px; }
+  .events-action-bar input { width: 100% !important; }
+  .events-action-bar .btn { flex-shrink: 0; }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="app-content-header">
+  <div class="container-fluid">
+    <div class="row align-items-center">
+      <div class="col">
+        <div class="muted" style="font-size:.9rem">管理售前、售中、售后事件，创建协同群聊，归档已完成任务</div>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="app-content page-content">
+<div class="container-fluid" style="height:100%;display:flex;flex-direction:column">
+
+  <!-- Stats Row -->
+  <div class="row g-3 mb-3" id="statsRow">
+    <div class="col-md-3 col-6"><div class="card p-3 text-center border-0 shadow-sm"><div class="h5 mb-0 fw-bold" style="color:var(--brand)" id="statTotal">-</div><div class="muted small">全部事件</div></div></div>
+    <div class="col-md-3 col-6"><div class="card p-3 text-center border-0 shadow-sm"><div class="h5 mb-0 fw-bold" style="color:#1d4ed8" id="statPre">-</div><div class="muted small">售前</div></div></div>
+    <div class="col-md-3 col-6"><div class="card p-3 text-center border-0 shadow-sm"><div class="h5 mb-0 fw-bold" style="color:#065f46" id="statIn">-</div><div class="muted small">售中</div></div></div>
+    <div class="col-md-3 col-6"><div class="card p-3 text-center border-0 shadow-sm"><div class="h5 mb-0 fw-bold" style="color:#92400e" id="statAfter">-</div><div class="muted small">售后</div></div></div>
+  </div>
+
+  <!-- Main Card -->
+  <div class="card" style="flex:1;display:flex;flex-direction:column;overflow:hidden">
+    <div class="card-header d-flex align-items-center justify-content-between flex-wrap gap-2 px-4 py-3">
+      <div class="d-flex gap-1 events-filter-bar">
+        <button class="btn btn-sm cat-btn active" data-cat="all" style="border-radius:999px">全部</button>
+        <button class="btn btn-sm cat-btn" data-cat="pre_sales" style="border-radius:999px">售前事件</button>
+        <button class="btn btn-sm cat-btn" data-cat="in_sales" style="border-radius:999px">售中事件</button>
+        <button class="btn btn-sm cat-btn" data-cat="after_sales" style="border-radius:999px">售后事件</button>
+        <div class="vr mx-1"></div>
+        <select class="form-select form-select-sm" id="tagFilter" style="border-radius:999px;width:auto;min-width:100px">
+          <option value="">全部标签</option>
+        </select>
+        <select class="form-select form-select-sm" id="priorityFilter" style="border-radius:999px;width:auto;min-width:90px">
+          <option value="">全部优先级</option>
+          <option value="high">高优先级</option>
+          <option value="medium">中优先级</option>
+          <option value="low">低优先级</option>
+        </select>
+      </div>
+      <div class="d-flex gap-2 events-action-bar">
+        <input class="form-control form-control-sm" id="eventSearchInput" placeholder="搜索事件..." style="border-radius:999px;width:180px">
+        <button class="btn btn-sm btn-outline-secondary" id="showArchiveBtn" style="border-radius:999px"><i class="bi bi-archive me-1"></i>归档</button>
+        <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#createEventModal" style="border-radius:999px"><i class="bi bi-plus-lg me-1"></i>新建事件</button>
+      </div>
+    </div>
+    <div class="card-body p-0" style="flex:1;overflow:hidden">
+      <div id="eventList" class="content-scroll p-3" style="height:100%"></div>
+      <div id="archivedList" class="content-scroll p-3" style="height:100%;display:none"></div>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- Create Event Modal -->
+<div class="modal fade" id="createEventModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content" style="border-radius:12px;border:none;box-shadow:0 20px 60px rgba(0,0,0,.15)">
+      <div class="modal-header border-0 pb-0">
+        <h5 class="fw-bold">创建新事件</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div class="mb-3">
+          <label class="form-label small fw-medium">事件标题</label>
+          <input class="form-control" id="evTitle" placeholder="输入事件标题" style="border-radius:10px">
+        </div>
+        <div class="mb-3">
+          <label class="form-label small fw-medium">事件分类</label>
+          <select class="form-select" id="evCategory" style="border-radius:10px">
+            <option value="pre_sales">售前事件</option>
+            <option value="in_sales">售中事件</option>
+            <option value="after_sales">售后事件</option>
+          </select>
+        </div>
+        <div class="row g-2 mb-3">
+          <div class="col-6">
+            <label class="form-label small fw-medium">优先级</label>
+            <select class="form-select" id="evPriority" style="border-radius:10px">
+              <option value="high">高</option>
+              <option value="medium" selected>中</option>
+              <option value="low">低</option>
+            </select>
+          </div>
+          <div class="col-6">
+            <label class="form-label small fw-medium">金额</label>
+            <input class="form-control" id="evAmount" type="number" step="0.01" placeholder="0.00" style="border-radius:10px">
+          </div>
+        </div>
+        <div class="row g-2 mb-3">
+          <div class="col-6">
+            <label class="form-label small fw-medium">开始日期</label>
+            <input class="form-control" id="evStartDate" type="date" style="border-radius:10px">
+          </div>
+          <div class="col-6">
+            <label class="form-label small fw-medium">截止日期</label>
+            <input class="form-control" id="evEndDate" type="date" style="border-radius:10px">
+          </div>
+        </div>
+        <div class="row g-2 mb-3">
+          <div class="col-6">
+            <label class="form-label small fw-medium">联系人</label>
+            <input class="form-control" id="evContactPerson" placeholder="姓名" style="border-radius:10px">
+          </div>
+          <div class="col-6">
+            <label class="form-label small fw-medium">联系电话</label>
+            <input class="form-control" id="evContactPhone" placeholder="手机号" style="border-radius:10px">
+          </div>
+        </div>
+        <div class="mb-3">
+          <label class="form-label small fw-medium">事件描述</label>
+          <textarea class="form-control" id="evDesc" rows="3" placeholder="描述事件详情" style="border-radius:10px"></textarea>
+        </div>
+        <div class="mb-3">
+          <label class="form-label small fw-medium">参与成员</label>
+          <div class="d-flex gap-2">
+            <input class="form-control" id="evMemberSearch" placeholder="搜索用户添加" style="border-radius:10px">
+            <button class="btn btn-outline-primary" id="evMemberSearchBtn" style="border-radius:10px"><i class="bi bi-search"></i></button>
+          </div>
+          <div id="evMemberResults" class="mt-2" style="max-height:150px;overflow-y:auto"></div>
+          <div id="evMemberTags" class="d-flex flex-wrap gap-1 mt-2"></div>
+        </div>
+      </div>
+      <div class="modal-footer border-0 pt-0">
+        <button class="btn btn-secondary" data-bs-dismiss="modal" style="border-radius:10px">取消</button>
+        <button class="btn btn-primary" id="saveEventBtn" style="border-radius:10px">创建事件</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Create Group Modal -->
+<div class="modal fade" id="createGroupModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content" style="border-radius:12px;border:none;box-shadow:0 20px 60px rgba(0,0,0,.15)">
+      <div class="modal-header border-0 pb-0">
+        <h5 class="fw-bold">创建协同群聊</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <p class="muted small" id="groupEventInfo">为事件创建协同群聊</p>
+        <div class="mb-3">
+          <label class="form-label small fw-medium">群聊名称（自动关联事件名）</label>
+          <input class="form-control" id="grpTitle" placeholder="群聊名称" style="border-radius:10px">
+        </div>
+        <div class="mb-3">
+          <label class="form-label small fw-medium">邀请成员</label>
+          <div class="d-flex gap-2">
+            <input class="form-control" id="grpMemberSearch" placeholder="搜索用户邀请" style="border-radius:10px">
+            <button class="btn btn-outline-primary" id="grpMemberSearchBtn" style="border-radius:10px"><i class="bi bi-search"></i></button>
+          </div>
+          <div id="grpMemberResults" class="mt-2" style="max-height:150px;overflow-y:auto"></div>
+          <div id="grpMemberTags" class="d-flex flex-wrap gap-1 mt-2"></div>
+        </div>
+      </div>
+      <div class="modal-footer border-0 pt-0">
+        <button class="btn btn-secondary" data-bs-dismiss="modal" style="border-radius:10px">取消</button>
+        <button class="btn btn-primary" id="saveGroupBtn" style="border-radius:10px">创建群聊并进入</button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+// ===== State =====
+let allEvents = [];
+let currentCat = 'all';
+let currentTag = '';
+let currentPriority = '';
+let showArchived = false;
+let selectedMembers = [];
+let selectedGroupMembers = [];
+let createEventTargetId = null;
+let allTags = [];
+
+const catMap = {
+  pre_sales: {label:'售前', cls:'tag-pre'},
+  in_sales: {label:'售中', cls:'tag-in'},
+  after_sales: {label:'售后', cls:'tag-after'},
+};
+
+const priorityMap = {
+  high: {label:'高', color:'#ef4444', icon:'bi-arrow-up'},
+  medium: {label:'中', color:'#f59e0b', icon:'bi-dash'},
+  low: {label:'低', color:'#22c55e', icon:'bi-arrow-down'},
+};
+
+// ===== Load events =====
+async function loadEvents(category, searchTerm){
+  try {
+    const params = new URLSearchParams();
+    if(category && category !== 'all') params.set('category', category);
+    if(searchTerm) params.set('search', searchTerm);
+    if(currentTag) params.set('tag', currentTag);
+    const qs = params.toString();
+    const url = '/api/events/' + (qs ? `?${qs}` : '');
+    const r = await fetch(url, {credentials:'include'});
+    const data = await r.json();
+    allEvents = data.events || [];
+    updateStats(data.counts || {});
+    renderEvents();
+  } catch(e){ console.error(e); }
+}
+
+function updateStats(counts){
+  const total = Object.values(counts).reduce((a,b)=>a+b, 0);
+  document.getElementById('statTotal').textContent = total;
+  document.getElementById('statPre').textContent = counts.pre_sales || 0;
+  document.getElementById('statIn').textContent = counts.in_sales || 0;
+  document.getElementById('statAfter').textContent = counts.after_sales || 0;
+}
+
+function renderEvents(){
+  const container = showArchived ? document.getElementById('archivedList') : document.getElementById('eventList');
+  container.innerHTML = '';
+
+  let filtered = allEvents;
+  if(!showArchived) filtered = filtered.filter(e => e.status !== 'archived');
+  else filtered = filtered.filter(e => e.status === 'archived');
+
+  if(currentCat !== 'all') filtered = filtered.filter(e => e.category === currentCat);
+  if(currentPriority) filtered = filtered.filter(e => e.priority === currentPriority);
+
+  if(!filtered.length){
+    container.innerHTML = `<div class="empty-state"><i class="bi bi-inbox"></i><p>${showArchived ? '暂无归档事件' : '暂无事件，点击上方「新建事件」创建'}</p></div>`;
+    return;
+  }
+
+  filtered.forEach(e => {
+    const cat = catMap[e.category];
+    const catTag = cat ? `<span class="tag ${cat.cls}">${cat.label}</span>` : '';
+    const tagsHtml = (e.tags || []).map(t => `<span class="tag" style="background:${t.color}22;color:${t.color};font-size:.65rem">${t.name}</span>`).join('');
+    const pri = priorityMap[e.priority] || priorityMap.medium;
+    const priTag = `<span class="tag" style="background:${pri.color}18;color:${pri.color};font-size:.62rem"><i class="bi ${pri.icon} me-1"></i>${pri.label}</span>`;
+    const dateInfo = [];
+    if(e.start_date) dateInfo.push(`开始: ${e.start_date}`);
+    if(e.end_date) dateInfo.push(`截止: ${e.end_date}`);
+    const dateStr = dateInfo.join(' · ');
+    const contactStr = [];
+    if(e.contact_person) contactStr.push(e.contact_person);
+    if(e.contact_phone) contactStr.push(e.contact_phone);
+    const amountStr = e.amount ? `¥${parseFloat(e.amount).toLocaleString('zh-CN', {minimumFractionDigits:2})}` : '';
+
+    const div = document.createElement('div');
+    div.className = 'event-item fade-in';
+    const hasGroup = e.group_id && !e.group_archived;
+    div.style.cssText = 'padding:14px 0;border-bottom:1px solid var(--line);transition:.1s';
+    div.onmouseover = () => { div.style.background = 'var(--soft)'; div.style.margin = '0 -12px'; div.style.padding = '14px 12px'; div.style.borderRadius = '10px'; };
+    div.onmouseout = () => { div.style.background = ''; div.style.margin = '0'; div.style.padding = '14px 0'; div.style.borderRadius = '0'; };
+    div.innerHTML = `
+      <div class="d-flex justify-content-between align-items-start">
+        <div style="flex:1">
+          <div class="d-flex align-items-center gap-2 mb-1 flex-wrap">
+            <strong>${e.title}</strong>
+            ${priTag}
+            ${catTag}
+            ${tagsHtml}
+            ${e.status === 'archived' ? '<span class="tag tag-archived">已归档</span>' : ''}
+          </div>
+          ${e.description ? `<div class="muted small mb-2">${e.description}</div>` : ''}
+          <div class="d-flex align-items-center gap-3 muted" style="font-size:.78rem;flex-wrap:wrap">
+            <span><i class="bi bi-person me-1"></i>${e.created_by}</span>
+            <span><i class="bi bi-clock me-1"></i>${new Date(e.created_at).toLocaleDateString('zh-CN')}</span>
+            ${dateStr ? `<span><i class="bi bi-calendar-range me-1"></i>${dateStr}</span>` : ''}
+            ${contactStr.length ? `<span><i class="bi bi-telephone me-1"></i>${contactStr.join(' ')}</span>` : ''}
+            ${amountStr ? `<span><i class="bi bi-coin me-1"></i>${amountStr}</span>` : ''}
+          </div>
+        </div>
+        <div class="d-flex gap-1 flex-shrink-0">
+          ${e.status !== 'archived' ? `
+            ${hasGroup ? `
+              <button class="btn btn-sm btn-outline-success go-chat-btn" data-id="${e.group_id}" style="border-radius:999px;font-size:.78rem" title="进入群聊">
+                <i class="bi bi-chat-dots me-1"></i>群聊
+              </button>
+            ` : `
+              <button class="btn btn-sm btn-outline-primary create-group-btn" data-id="${e.id}" style="border-radius:999px;font-size:.78rem" title="创建协同群">
+                <i class="bi bi-people me-1"></i>建群
+              </button>
+            `}
+            <button class="btn btn-sm btn-outline-secondary archive-event-btn" data-id="${e.id}" style="border-radius:999px;font-size:.78rem" title="归档">
+              <i class="bi bi-archive"></i>
+            </button>
+          ` : `
+            <button class="btn btn-sm btn-outline-warning restore-event-btn" data-id="${e.id}" style="border-radius:999px;font-size:.78rem" title="恢复">
+              <i class="bi bi-arrow-counterclockwise"></i>恢复
+            </button>
+          `}
+        </div>
+      </div>
+    `;
+    container.appendChild(div);
+  });
+
+  container.querySelectorAll('.create-group-btn').forEach(b => {
+    b.addEventListener('click', () => openCreateGroup(b.dataset.id));
+  });
+  container.querySelectorAll('.archive-event-btn').forEach(b => {
+    b.addEventListener('click', () => archiveEvent(b.dataset.id));
+  });
+  container.querySelectorAll('.go-chat-btn').forEach(b => {
+    b.addEventListener('click', () => { location.href = '/chat/?conv=' + b.dataset.id; });
+  });
+  container.querySelectorAll('.restore-event-btn').forEach(b => {
+    b.addEventListener('click', () => restoreEvent(b.dataset.id));
+  });
+}
+
+// ===== Category tabs =====
+document.querySelectorAll('.cat-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('active', 'btn-primary'));
+    btn.classList.add('active', 'btn-primary');
+    btn.classList.remove('btn-outline-primary', 'btn-outline-secondary');
+    document.querySelectorAll('.cat-btn:not(.active)').forEach(b => {
+      b.classList.add('btn-outline-secondary');
+      b.classList.remove('btn-primary', 'btn-outline-primary');
+    });
+    currentCat = btn.dataset.cat;
+    renderEvents();
+  });
+});
+document.querySelectorAll('.cat-btn').forEach(b => { b.classList.add('btn-outline-secondary'); });
+document.querySelector('.cat-btn.active')?.classList.remove('btn-outline-secondary');
+document.querySelector('.cat-btn.active')?.classList.add('btn-primary');
+
+// ===== Archive toggle =====
+document.getElementById('showArchiveBtn').addEventListener('click', () => {
+  showArchived = !showArchived;
+  const btn = document.getElementById('showArchiveBtn');
+  document.getElementById('eventList').style.display = showArchived ? 'none' : 'block';
+  document.getElementById('archivedList').style.display = showArchived ? 'block' : 'none';
+  btn.innerHTML = showArchived ? '<i class="bi bi-list-ul me-1"></i>事件列表' : '<i class="bi bi-archive me-1"></i>归档';
+  if(showArchived) loadEvents();
+  else renderEvents();
+});
+
+// ===== Create Event =====
+document.getElementById('evMemberSearchBtn').addEventListener('click', async () => {
+  const q = document.getElementById('evMemberSearch').value.trim();
+  if(!q) return;
+  const r = await fetch(`/api/users/search/?q=${encodeURIComponent(q)}`, {credentials:'include'});
+  const data = await r.json();
+  const container = document.getElementById('evMemberResults');
+  container.innerHTML = '';
+  (data.users || []).forEach(u => {
+    const d = document.createElement('div');
+    d.className = 'd-flex align-items-center justify-content-between p-2 border-bottom';
+    d.innerHTML = `<span><img src="${u.avatar_url || '/static/avater.jpeg'}" class="avatar-sm me-2">${u.display_name || u.username}<span class="muted small ms-2">${u.organization || ""}</span></span>
+      <button class="btn btn-sm btn-outline-primary add-ev-member" data-id="${u.id}" data-name="${u.display_name || u.username}" style="border-radius:999px">添加</button>`;
+    container.appendChild(d);
+  });
+});
+document.addEventListener('click', e => {
+  if(e.target.classList.contains('add-ev-member')){
+    const id = parseInt(e.target.dataset.id);
+    const name = e.target.dataset.name;
+    if(!selectedMembers.find(m => m.id === id)){
+      selectedMembers.push({id, name});
+      renderMemberTags();
+    }
+  }
+});
+function renderMemberTags(){
+  const container = document.getElementById('evMemberTags');
+  container.innerHTML = selectedMembers.map(m =>
+    `<span class="tag" style="background:var(--brand-soft);color:var(--brand)">${m.name}<button class="btn-close btn-close-sm ms-1 remove-member" data-id="${m.id}" style="font-size:.55rem"></button></span>`
+  ).join('');
+  document.querySelectorAll('.remove-member').forEach(b => {
+    b.addEventListener('click', () => {
+      selectedMembers = selectedMembers.filter(m => m.id !== parseInt(b.dataset.id));
+      renderMemberTags();
+    });
+  });
+}
+document.getElementById('saveEventBtn').addEventListener('click', async () => {
+  const title = document.getElementById('evTitle').value.trim();
+  const category = document.getElementById('evCategory').value;
+  const priority = document.getElementById('evPriority').value;
+  const startDate = document.getElementById('evStartDate').value;
+  const endDate = document.getElementById('evEndDate').value;
+  const contactPerson = document.getElementById('evContactPerson').value.trim();
+  const contactPhone = document.getElementById('evContactPhone').value.trim();
+  const amount = document.getElementById('evAmount').value;
+  const desc = document.getElementById('evDesc').value.trim();
+  if(!title){ showToast('请输入事件标题', 'warning'); return; }
+  const r = await fetch('/api/events/create/', {
+    method:'POST', headers:{'Content-Type':'application/json'}, credentials:'include',
+    body: JSON.stringify({title, category, priority, start_date: startDate, end_date: endDate, contact_person: contactPerson, contact_phone: contactPhone, amount, description: desc, participant_ids: selectedMembers.map(m => m.id)})
+  });
+  const data = await r.json();
+  if(!r.ok){ showToast(data.detail || '创建失败', 'danger'); return; }
+  showToast('事件创建成功');
+  bootstrap.Modal.getInstance(document.getElementById('createEventModal')).hide();
+  document.getElementById('evTitle').value = '';
+  document.getElementById('evDesc').value = '';
+  selectedMembers = [];
+  renderMemberTags();
+  document.getElementById('evMemberResults').innerHTML = '';
+  loadEvents(currentCat);
+});
+
+// ===== Create Group =====
+async function openCreateGroup(eventId){
+  createEventTargetId = parseInt(eventId);
+  const ev = allEvents.find(e => e.id === parseInt(eventId));
+  if(!ev) return;
+  document.getElementById('groupEventInfo').textContent = `为「${ev.title}」创建协同群聊`;
+  document.getElementById('grpTitle').value = ev.title + ' - 协同群';
+  selectedGroupMembers = [];
+  document.getElementById('grpMemberTags').innerHTML = '';
+  document.getElementById('grpMemberResults').innerHTML = '';
+  document.getElementById('grpMemberSearch').value = '';
+  new bootstrap.Modal(document.getElementById('createGroupModal')).show();
+}
+
+document.getElementById('grpMemberSearchBtn').addEventListener('click', async () => {
+  const q = document.getElementById('grpMemberSearch').value.trim();
+  if(!q) return;
+  const r = await fetch(`/api/users/search/?q=${encodeURIComponent(q)}`, {credentials:'include'});
+  const data = await r.json();
+  const container = document.getElementById('grpMemberResults');
+  container.innerHTML = '';
+  (data.users || []).forEach(u => {
+    const d = document.createElement('div');
+    d.className = 'd-flex align-items-center justify-content-between p-2 border-bottom';
+    d.innerHTML = `<span><img src="${u.avatar_url || '/static/avater.jpeg'}" class="avatar-sm me-2">${u.display_name || u.username}<span class="muted small ms-2">${u.organization || ""}</span></span>
+      <button class="btn btn-sm btn-outline-primary add-grp-member" data-id="${u.id}" data-name="${u.display_name || u.username}" style="border-radius:999px">邀请</button>`;
+    container.appendChild(d);
+  });
+});
+document.addEventListener('click', e => {
+  if(e.target.classList.contains('add-grp-member')){
+    const id = parseInt(e.target.dataset.id);
+    const name = e.target.dataset.name;
+    if(!selectedGroupMembers.find(m => m.id === id)){
+      selectedGroupMembers.push({id, name});
+      renderGrpMemberTags();
+    }
+  }
+});
+function renderGrpMemberTags(){
+  const container = document.getElementById('grpMemberTags');
+  container.innerHTML = selectedGroupMembers.map(m =>
+    `<span class="tag" style="background:var(--brand-soft);color:var(--brand)">${m.name}<button class="btn-close btn-close-sm ms-1 remove-grp-member" data-id="${m.id}" style="font-size:.55rem"></button></span>`
+  ).join('');
+  document.querySelectorAll('.remove-grp-member').forEach(b => {
+    b.addEventListener('click', () => {
+      selectedGroupMembers = selectedGroupMembers.filter(m => m.id !== parseInt(b.dataset.id));
+      renderGrpMemberTags();
+    });
+  });
+}
+document.getElementById('saveGroupBtn').addEventListener('click', async () => {
+  if(!createEventTargetId) return;
+  const title = document.getElementById('grpTitle').value.trim() || ('协同群-' + Date.now());
+  const r = await fetch(`/api/events/${createEventTargetId}/create-group/`, {
+    method:'POST', headers:{'Content-Type':'application/json'}, credentials:'include',
+    body: JSON.stringify({title, participant_ids: selectedGroupMembers.map(m => m.id)})
+  });
+  const data = await r.json();
+  if(!r.ok){ showToast(data.detail || '创建失败', 'danger'); return; }
+  showToast('协同群创建成功');
+  bootstrap.Modal.getInstance(document.getElementById('createGroupModal')).hide();
+  loadEvents(currentCat);
+  if(data.group_id) location.href = '/chat/?conv=' + data.group_id;
+});
+
+// ===== Archive/Restore Event =====
+async function archiveEvent(eventId){
+  if(!confirm('确定归档该事件？')) return;
+  const r = await fetch(`/api/events/${eventId}/archive/`, {
+    method:'POST', headers:{'Content-Type':'application/json'}, credentials:'include'
+  });
+  if(!r.ok){ showToast('归档失败', 'danger'); return; }
+  showToast('事件已归档');
+  loadEvents(currentCat);
+}
+
+async function restoreEvent(eventId){
+  if(!confirm('确定恢复该事件？')) return;
+  const r = await fetch(`/api/events/${eventId}/restore/`, {
+    method:'POST', headers:{'Content-Type':'application/json'}, credentials:'include'
+  });
+  if(!r.ok){
+    const data = await r.json();
+    showToast(data.detail || '恢复失败', 'danger');
+    return;
+  }
+  showToast('事件已恢复');
+  loadEvents(currentCat);
+}
+
+// ===== Search =====
+let searchTimer = null;
+document.getElementById('eventSearchInput').addEventListener('input', function(){
+  clearTimeout(searchTimer);
+  searchTimer = setTimeout(() => {
+    loadEvents(currentCat, this.value.trim());
+  }, 300);
+});
+
+// ===== Tag filter =====
+document.getElementById('tagFilter').addEventListener('change', function(){
+  currentTag = this.value;
+  loadEvents(currentCat, document.getElementById('eventSearchInput').value.trim());
+});
+
+document.getElementById('priorityFilter').addEventListener('change', function(){
+  currentPriority = this.value;
+  renderEvents();
+});
+
+// ===== Load tags for filter dropdown =====
+async function loadTags(){
+  try {
+    const r = await fetch('/api/tags/', {credentials:'include'});
+    const data = await r.json();
+    allTags = data.tags || [];
+    const sel = document.getElementById('tagFilter');
+    allTags.forEach(t => {
+      const opt = document.createElement('option');
+      opt.value = t.id;
+      opt.textContent = t.name;
+      sel.appendChild(opt);
+    });
+  } catch(e){}
+}
+
+// ===== Init =====
+document.addEventListener('DOMContentLoaded', () => {
+  loadTags();
+  loadEvents('all');
+});
+</script>
+{% endblock %}

@@ -1,0 +1,224 @@
+<!doctype html>
+<html lang="zh-Hans">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>注册 - 事件协同群聊工具</title>
+  <link rel="stylesheet" href="/static/css/adminlte.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/font/bootstrap-icons.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/source-sans-3@5.0.12/index.css" crossorigin="anonymous" />
+  <style>
+    :root{--brand:#1a73e8;--brand-light:#4a90d9;--brand-soft:#e8f0fe;}
+    *{box-sizing:border-box}
+    body{
+      background:linear-gradient(135deg,#e8f0fe 0%,#f0f6ff 50%,#fafcff 100%);
+      min-height:100vh;font-family:'Source Sans 3',system-ui,sans-serif;
+      display:flex;align-items:center;justify-content:center;margin:0;padding:20px
+    }
+    .auth-wrap{width:100%;max-width:960px;margin:0 auto}
+    .auth-card{
+      display:grid;grid-template-columns:1fr 1fr;min-height:600px;
+      background:#fff;border-radius:20px;overflow:hidden;
+      box-shadow:0 20px 60px rgba(26,115,232,.1),0 8px 20px rgba(0,0,0,.04);
+      animation:fadeUp .5s ease
+    }
+    @keyframes fadeUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+    .hero-panel{
+      background:linear-gradient(160deg,#1a73e8,#4a90d9);
+      color:#fff;padding:40px;display:flex;flex-direction:column;justify-content:space-between;
+      position:relative;overflow:hidden
+    }
+    .hero-panel::before{
+      content:'';position:absolute;top:-60px;right:-60px;width:200px;height:200px;
+      border-radius:50%;background:rgba(255,255,255,.06)
+    }
+    .hero-badge{
+      display:inline-flex;align-items:center;gap:6px;
+      background:rgba(255,255,255,.15);padding:6px 14px;border-radius:999px;
+      font-size:.8rem;font-weight:500;backdrop-filter:blur(4px)
+    }
+    .hero-title{font-size:1.7rem;font-weight:800;line-height:1.3;margin-top:20px}
+    .hero-desc{font-size:.9rem;opacity:.8;margin-top:10px;line-height:1.6}
+    .avatar-preview-wrap{text-align:center;padding:20px;background:rgba(255,255,255,.08);border-radius:16px;backdrop-filter:blur(4px)}
+    .preview-avatar{width:88px;height:88px;border-radius:50%;object-fit:cover;border:4px solid rgba(255,255,255,.4);background:#fff;margin-bottom:8px;transition:transform .3s}
+    .preview-avatar:hover{transform:scale(1.05)}
+    .form-panel{padding:40px;display:flex;flex-direction:column;justify-content:center}
+    .form-header{margin-bottom:24px}
+    .form-header h3{font-size:1.4rem;font-weight:700;margin:0 0 4px}
+    .form-header p{color:#64748b;margin:0;font-size:.9rem}
+    .form-group{margin-bottom:16px}
+    .form-group label{display:block;font-size:.82rem;font-weight:500;color:#475569;margin-bottom:6px}
+    .input-wrap{
+      position:relative;display:flex;align-items:center;
+      border:1.5px solid #e2e8f0;border-radius:10px;transition:all .2s;background:#f8fafc
+    }
+    .input-wrap:focus-within{border-color:var(--brand);background:#fff;box-shadow:0 0 0 3px rgba(26,115,232,.1)}
+    .input-wrap .input-icon{padding:0 0 0 14px;color:#94a3b8;font-size:1rem;display:flex;align-items:center}
+    .input-wrap input,.input-wrap input[type="file"]{
+      flex:1;border:none;background:transparent;padding:10px 14px;
+      font-size:.9rem;color:#1e293b;outline:none;font-family:inherit
+    }
+    .input-wrap input::placeholder{color:#94a3b8}
+    .input-wrap input[type="file"]{padding:7px 14px;font-size:.82rem}
+    .toggle-pw-wrap{
+      padding:0 14px 0 0;color:#94a3b8;cursor:pointer;font-size:.9rem;
+      display:none;align-items:center
+    }
+    .toggle-pw-wrap.show{display:flex}
+    .toggle-pw-wrap:hover{color:#64748b}
+    .auth-btn{
+      width:100%;padding:11px;border:none;border-radius:10px;
+      background:var(--brand);color:#fff;font-size:.92rem;font-weight:600;
+      cursor:pointer;transition:all .2s;display:flex;align-items:center;
+      justify-content:center;gap:8px;font-family:inherit;margin-top:4px
+    }
+    .auth-btn:hover{background:#1557b0;transform:translateY(-1px);box-shadow:0 4px 12px rgba(26,115,232,.3)}
+    .auth-btn:active{transform:translateY(0)}
+    .auth-btn:disabled{opacity:.6;cursor:not-allowed;transform:none}
+    .auth-btn .spinner{width:18px;height:18px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .6s linear infinite;display:none}
+    .auth-btn.loading .spinner{display:inline-block}
+    @keyframes spin{to{transform:rotate(360deg)}}
+    .msg{padding:10px 14px;border-radius:8px;font-size:.85rem;margin-top:10px;display:none;animation:fadeIn .2s}
+    .msg.show{display:block}
+    .msg.error{background:#fef2f2;border:1px solid #fecaca;color:#dc2626}
+    .msg.success{background:#f0fdf4;border:1px solid #bbf7d0;color:#16a34a}
+    .auth-footer{text-align:center;margin-top:18px;font-size:.88rem;color:#64748b}
+    .auth-footer a{color:var(--brand);text-decoration:none;font-weight:600}
+    .auth-footer a:hover{text-decoration:underline}
+    .file-input-label{cursor:pointer;color:#64748b;font-size:.82rem;display:flex;align-items:center;gap:6px}
+    .file-input-label i{font-size:1rem;color:var(--brand)}
+    @media(max-width:768px){
+      .auth-card{grid-template-columns:1fr;min-height:auto}
+      .hero-panel{padding:32px;min-height:200px}
+      .form-panel{padding:32px}
+    }
+  </style>
+</head>
+<body>
+  <div class="auth-wrap">
+    <div class="auth-card">
+      <div class="hero-panel">
+        <div>
+          <span class="hero-badge"><i class="bi bi-lightning-fill"></i> 星辰协同平台</span>
+          <h1 class="hero-title">创建你的账号</h1>
+          <p class="hero-desc">注册后即可使用事件协同、即时通讯等全部功能。</p>
+        </div>
+        <div class="avatar-preview-wrap">
+          <img id="previewAvatar" src="/static/avater.jpeg" class="preview-avatar" alt="头像预览">
+          <div style="font-size:.82rem;opacity:.8">点击下方上传头像（可选）</div>
+        </div>
+      </div>
+      <div class="form-panel">
+        <div class="form-header">
+          <h3>注册</h3>
+          <p>已有账号？<a href="/auth/login/" style="color:var(--brand);text-decoration:none;font-weight:600">去登录</a></p>
+        </div>
+        <div class="form-group">
+          <label>昵称</label>
+          <div class="input-wrap">
+            <span class="input-icon"><i class="bi bi-person-badge"></i></span>
+            <input id="display_name" type="text" placeholder="输入昵称（选填）" autocomplete="off">
+          </div>
+        </div>
+        <div class="form-group">
+          <label>用户名 <span style="color:#dc2626">*</span></label>
+          <div class="input-wrap">
+            <span class="input-icon"><i class="bi bi-at"></i></span>
+            <input id="username" type="text" placeholder="至少3位字母或数字" autocomplete="username" autofocus>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>密码 <span style="color:#dc2626">*</span></label>
+          <div class="input-wrap">
+            <span class="input-icon"><i class="bi bi-lock"></i></span>
+            <input id="password" type="password" placeholder="至少6位" autocomplete="new-password">
+            <span class="toggle-pw-wrap" id="togglePw" onclick="togglePassword()"><i class="bi bi-eye"></i></span>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>手机号</label>
+          <div class="input-wrap">
+            <span class="input-icon"><i class="bi bi-phone"></i></span>
+            <input id="phone" type="tel" placeholder="选填，用于登录" autocomplete="tel">
+          </div>
+        </div>
+        <div class="form-group">
+          <label>头像（选填）</label>
+          <div class="input-wrap">
+            <span class="input-icon"><i class="bi bi-camera"></i></span>
+            <input id="avatar" type="file" accept="image/*" class="file-input-label">
+          </div>
+        </div>
+        <button class="auth-btn" id="registerBtn" onclick="register()">
+          <span class="spinner"></span>
+          <span class="btn-text">注册并进入平台</span>
+        </button>
+        <div class="msg" id="msg"><span></span></div>
+      </div>
+    </div>
+  </div>
+<script>
+function togglePassword(){
+  const pw = document.getElementById('password');
+  const icon = document.getElementById('togglePw').querySelector('i');
+  pw.type = pw.type === 'password' ? 'text' : 'password';
+  icon.className = pw.type === 'password' ? 'bi bi-eye' : 'bi bi-eye-slash';
+}
+document.getElementById('togglePw').style.display = 'flex';
+document.getElementById('password').addEventListener('input', function(){
+  document.getElementById('togglePw').style.display = this.value ? 'flex' : '';
+});
+
+function showMsg(msg, type){
+  const el = document.getElementById('msg');
+  el.className = 'msg ' + type + ' show';
+  el.querySelector('span').textContent = msg;
+}
+function hideMsg(){ document.getElementById('msg').className = 'msg'; }
+
+// Avatar preview
+document.getElementById('avatar').addEventListener('change', function(){
+  const f = this.files[0];
+  if(f) document.getElementById('previewAvatar').src = URL.createObjectURL(f);
+});
+
+async function register(){
+  const displayName = document.getElementById('display_name').value.trim();
+  const username = document.getElementById('username').value.trim();
+  const password = document.getElementById('password').value;
+  const btn = document.getElementById('registerBtn');
+  hideMsg();
+
+  if(!username || username.length < 3){ showMsg('用户名至少3位', 'error'); document.getElementById('username').focus(); return; }
+  if(!password || password.length < 6){ showMsg('密码至少6位', 'error'); document.getElementById('password').focus(); return; }
+
+  btn.classList.add('loading');
+  btn.disabled = true;
+  try {
+    const fd = new FormData();
+    fd.append('username', username);
+    fd.append('password', password);
+    fd.append('display_name', displayName || username);
+    const phone = document.getElementById('phone').value.trim();
+    if(phone) fd.append('phone', phone);
+    const avatarFile = document.getElementById('avatar').files[0];
+    if(avatarFile) fd.append('avatar', avatarFile);
+    const res = await fetch('/api/auth/register/', {method:'POST', body: fd});
+    const data = await res.json();
+    if(!res.ok){ showMsg(data.detail || '注册失败', 'error'); btn.classList.remove('loading'); btn.disabled = false; return; }
+    showMsg('注册成功，正在跳转...', 'success');
+    setTimeout(() => { location.href = '/dashboard/'; }, 500);
+  } catch(e){
+    showMsg('网络错误，请重试', 'error');
+    btn.classList.remove('loading');
+    btn.disabled = false;
+  }
+}
+
+// Enter to submit
+document.addEventListener('keydown', (e) => {
+  if(e.key === 'Enter') register();
+});
+</script>
+</body>
+</html>
