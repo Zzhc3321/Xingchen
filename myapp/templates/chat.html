@@ -58,6 +58,14 @@
         <button class="btn btn-outline-secondary mb-0" id="aiRobotBtn" style="border-radius:999px;padding:6px 12px;display:none" title="@星辰AI助手">
           <i class="bi bi-robot"></i>
         </button>
+        <div class="position-relative">
+          <button class="btn btn-outline-secondary mb-0" id="emojiBtn" style="border-radius:999px;cursor:pointer;padding:6px 12px" title="表情">
+            <i class="bi bi-emoji-smile"></i>
+          </button>
+          <div id="emojiPicker" class="emoji-picker" style="display:none">
+            <div class="emoji-picker-inner" id="emojiPickerInner"></div>
+          </div>
+        </div>
         <label class="btn btn-outline-secondary mb-0" style="border-radius:999px;cursor:pointer;padding:6px 12px" title="发送文件">
           <i class="bi bi-paperclip"></i>
           <input type="file" id="fileInput" style="display:none">
@@ -151,6 +159,23 @@
     .chat-layout #chatPanel.active-mobile { display: flex !important; }
     .chat-layout #emptyPanel { display: none !important; }
   }
+  .emoji-picker {
+    position: absolute; bottom: 100%; left: 0; margin-bottom: 6px;
+    width: 320px; max-height: 240px; background: #fff;
+    border: 1px solid var(--line); border-radius: 12px;
+    box-shadow: var(--shadow-lg); z-index: 600; overflow: hidden;
+  }
+  .emoji-picker-inner {
+    display: flex; flex-wrap: wrap; gap: 2px; padding: 8px;
+    overflow-y: auto; max-height: 240px; align-content: flex-start;
+  }
+  .emoji-picker-inner::-webkit-scrollbar { width: 4px; }
+  .emoji-picker-inner::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 3px; }
+  .emoji-item {
+    width: 36px; height: 36px; display: flex; align-items: center; justify-content: center;
+    font-size: 1.3rem; cursor: pointer; border-radius: 8px; transition: .1s; user-select: none;
+  }
+  .emoji-item:hover { background: var(--brand-soft); transform: scale(1.15); }
 </style>
 <script>
 // ===== State =====
@@ -628,6 +653,39 @@ document.getElementById('clearPendingFileBtn').addEventListener('click', () => {
   pendingFile = null;
   document.getElementById('pendingFile').style.display = 'none';
   document.getElementById('pendingFileName').textContent = '';
+});
+
+// ===== Emoji Picker =====
+const EMOJIS = ['😀','😃','😄','😁','😅','🤣','😂','🙂','😊','😇','🥰','😍','🤩','😘','😗','😚','😋','😛','😜','🤪','😝','🤑','🤗','🤭','🫢','🤫','🤔','🫡','🤐','🤨','😐','😑','😶','🫥','😏','😒','🙄','😬','🤥','😌','😔','😪','🤤','😴','😷','🤒','🤕','🤢','🤮','🥴','😵','🤯','🥳','🥺','😢','😭','😤','😠','😡','🤬','💀','☠️','💩','🤡','👹','👺','👻','👽','👾','🤖','😺','😸','😹','😻','😼','😽','🙀','😿','😾','🙌','👏','👍','👎','👊','✊','🤛','🤜','🤞','✌️','🤟','🤘','🤙','👋','🤚','✋','👌','🤌','🤏','🫵','💪','🦵','🦶','👀','👅','👄','❤️','🧡','💛','💚','💙','💜','🖤','🤍','🤎','💔','❣️','💕','💞','💓','💗','💖','💘','💝','💟','✨','🌟','⭐','🔥','💯','🎉','🎊','🎈','🎁','🎀','🪄','💎','🚀','📌','📍','🎯','🏆','⚽','🏀','🏈','⚾','🎾','🏐','🏉','🎱','🪀','🏓','🏸','🏒','🏏','🥊','🛹','🛼','🚲','🛴','🛵','🏍️','✈️','🚁','🚂','🚗','🚕','🚙','🚌','🚎','🏎️','🚑','🚒','🚜','🛸','🚀','🛰️','🌍','🌎','🌏','🌈','☀️','🌤️','⛅','🌦️','☁️','🌧️','⛈️','🌩️','🌨️','❄️','☃️','🔥','💧','🌊','🍎','🍐','🍊','🍋','🍌','🍉','🍇','🍓','🫐','🍈','🍒','🍑','🥭','🍍','🥥','🥝','🍅','🍆','🥑','🥦','🥬','🥒','🌽','🥕','🫑','🧄','🧅','🥔','🍠','🫘','🥜','🍞','🥖','🥯','🧀','🥚','🍳','🥞','🧇','🥓','🥩','🍗','🍖','🌭','🍔','🍟','🍕','🫓','🥪','🥙','🧆','🌮','🌯','🥗','🥘','🫕','🥫','🍝','🍜','🍲','🍛','🍣','🍱','🥟','🦪','🍤','🍙','🍚','🍘','🍥','🥠','🥮','🍡','🍧','🍨','🍦','🥧','🧁','🍰','🎂','🍮','🍭','🍬','🍫','🍿','🍩','🍪','🌰','🥛','☕','🍵','🍶','🍺','🍻','🥂','🍷','🥃','🍸','🍹','🧉','🧊','🥄','🍴','🥣','🍽️','🐶','🐱','🐭','🐹','🐰','🦊','🐻','🐼','🐨','🐯','🦁','🐮','🐷','🐸','🐵','🙈','🙉','🙊','🐒','🐔','🐧','🐦','🐤','🐣','🐥','🦆','🦅','🦉','🦇','🐺','🐗','🐴','🦄','🐝','🐛','🦋','🐌','🐞','🐜','🪰','🪲','🪳','🦟','🦗','🕷️','🦂','🐢','🐍','🦎','🦖','🦕','🐙','🦑','🦐','🦞','🦀','🐡','🐠','🐟','🐬','🐳','🐋','🦈','🐊','🐅','🐆','🦓','🦍','🦧','🐘','🦛','🦏','🐪','🐫','🦒','🦘','🦬','🐃','🐂','🐄','🐎','🐖','🐏','🐑','🦙','🐐','🦌','🐕','🐩','🦮','🐕‍🦺','🐈','🐈‍⬛','🪶','🐓','🦃','🦤','🦚','🦜','🦢','🦩','🕊️','🐇','🦝','🦨','🦡','🦫','🦦','🦥','🐁','🐀','🐿️','🦔','🐾','🐉','🐲','🌵','🎄','🌲','🌳','🌴','🌱','🌿','☘️','🍀','🎍','🪴','🎋','🍃','🍂','🍁','🪺','🪹','🍄','🐚','🪸','🌸','💐','🌹','🥀','🌺','🌻','🌼','🌷','🪷','🌾','💐','🌷','🌹','🥀','🌺','🌻','🌼','🌸','🌞','🌝','🌛','🌜','🌚','🌕','🌖','🌗','🌘','🌑','🌒','🌓','🌔','🌙','🌎','🌍','🌏','🪐','💫','⭐','🌟','✨','⚡','☄️','💥','🔥','🌪️','🌈','☀️','🌤️','⛅','🌦️','☁️','🌧️','⛈️','🌩️','🌨️','❄️','☃️'];
+const emojiBtn = document.getElementById('emojiBtn');
+const emojiPicker = document.getElementById('emojiPicker');
+const emojiInner = document.getElementById('emojiPickerInner');
+EMOJIS.forEach(emoji => {
+  const el = document.createElement('span');
+  el.className = 'emoji-item';
+  el.textContent = emoji;
+  el.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const input = document.getElementById('msgInput');
+    const start = input.selectionStart;
+    const end = input.selectionEnd;
+    const value = input.value;
+    input.value = value.substring(0, start) + emoji + value.substring(end);
+    input.focus();
+    input.selectionStart = input.selectionEnd = start + emoji.length;
+    input.dispatchEvent(new Event('input'));
+    emojiPicker.style.display = 'none';
+  });
+  emojiInner.appendChild(el);
+});
+emojiBtn.addEventListener('click', (e) => {
+  e.stopPropagation();
+  emojiPicker.style.display = emojiPicker.style.display === 'none' ? 'block' : 'none';
+});
+document.addEventListener('click', (e) => {
+  if (!emojiBtn.contains(e.target) && !emojiPicker.contains(e.target)) {
+    emojiPicker.style.display = 'none';
+  }
 });
 
 // ===== Revoke Message =====
