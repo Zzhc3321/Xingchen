@@ -1,0 +1,886 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}我的材料 - 星辰协同平台{% endblock %}
+{% block page_title %}我的材料{% endblock %}
+
+{% block content %}
+<div class="app-content-header">
+  <div class="container-fluid">
+    <div class="muted" style="font-size:.9rem">查看和管理你的报告、总结和文档</div>
+  </div>
+</div>
+<div class="app-content page-content">
+<div class="container-fluid" style="height:100%;display:flex;flex-direction:column">
+
+  <!-- Stats Row -->
+  <div id="matStats" class="d-flex gap-2 gap-md-3 mb-3 flex-wrap"></div>
+
+  <!-- Search + Tabs + Batch Actions Row -->
+  <div class="d-flex flex-column flex-sm-row align-items-start align-items-sm-center gap-3 mb-3">
+    <!-- Tabs -->
+    <div class="d-flex gap-2 flex-wrap align-items-center">
+      <button class="btn btn-sm mat-tab active" data-type="all" style="border-radius:999px;background:var(--brand);color:#fff;border:none;font-weight:500">全部</button>
+      <button class="btn btn-sm mat-tab" data-type="daily,weekly" style="border-radius:999px;background:var(--brand-soft);color:var(--brand);border:none;font-weight:500">周报日报</button>
+      <button class="btn btn-sm mat-tab" data-type="archive_summary" style="border-radius:999px;background:var(--brand-soft);color:var(--brand);border:none;font-weight:500">群聊总结</button>
+      <button class="btn btn-sm mat-tab" data-type="user_doc" style="border-radius:999px;background:var(--brand-soft);color:var(--brand);border:none;font-weight:500">我的文档</button>
+      <!-- Batch delete — shown when items selected -->
+      <button id="batchDeleteBtn" class="btn btn-sm d-none" style="border-radius:999px;background:#fee2e2;color:#dc2626;border:none;font-weight:500">
+        <i class="bi bi-trash me-1"></i>批量删除 <span id="batchCount">0</span>
+      </button>
+    </div>
+    <!-- Search -->
+    <div class="ms-sm-auto w-100" style="max-width:280px">
+      <div class="input-group input-group-sm" style="border-radius:10px;overflow:hidden;border:1px solid var(--line);background:#fff">
+        <span class="input-group-text border-0 bg-transparent text-muted ps-3"><i class="bi bi-search" style="font-size:.8rem"></i></span>
+        <input type="text" id="matSearchInput" class="form-control border-0 bg-transparent shadow-none" placeholder="搜索标题..." style="font-size:.85rem;padding-left:0" />
+        <button id="matSearchClear" class="btn border-0 bg-transparent text-muted d-none" style="font-size:.7rem"><i class="bi bi-x-lg"></i></button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Materials Card -->
+  <div class="card" style="flex:1;display:flex;flex-direction:column;overflow:hidden;border-radius:14px">
+    <div class="card-header d-flex align-items-center justify-content-between px-4 py-3 bg-transparent" style="border-bottom:1px solid var(--line)">
+      <div class="d-flex align-items-center gap-3">
+        <span class="fw-semibold" style="font-size:.9rem;color:var(--ink)">
+          <i class="bi bi-folder me-2" style="color:var(--brand)"></i>材料列表
+        </span>
+        <div class="btn-group btn-group-sm" style="border-radius:8px;overflow:hidden;border:1px solid var(--line)">
+          <button id="sortNewBtn" class="btn btn-sm active" data-sort="newest" style="border:none;padding:2px 10px;font-size:.72rem;background:var(--brand);color:#fff;font-weight:500">最新</button>
+          <button id="sortOldBtn" class="btn btn-sm" data-sort="oldest" style="border:none;padding:2px 10px;font-size:.72rem;background:transparent;color:var(--muted)">最旧</button>
+        </div>
+      </div>
+      <div class="d-flex align-items-center gap-3">
+        <!-- Batch select all checkbox -->
+        <div id="batchSelectAllWrap" class="d-none">
+          <div class="form-check" style="cursor:pointer">
+            <input type="checkbox" id="batchSelectAll" class="form-check-input" style="cursor:pointer" />
+            <label class="form-check-label muted small" for="batchSelectAll" style="cursor:pointer;font-size:.78rem">全选</label>
+          </div>
+        </div>
+        <span class="muted small" id="matCount">0 项</span>
+      </div>
+    </div>
+    <div class="card-body p-0" style="flex:1;overflow:hidden;display:flex;flex-direction:column">
+      <!-- Loading skeleton -->
+      <div id="matSkeleton" class="d-none p-3">
+        <div class="d-flex flex-column gap-3">
+          <div class="placeholder-glow d-flex"><span class="placeholder col-8 rounded-3" style="height:20px"></span></div>
+          <div class="placeholder-glow d-flex"><span class="placeholder col-5 rounded-3" style="height:20px"></span></div>
+          <div class="placeholder-glow d-flex"><span class="placeholder col-7 rounded-3" style="height:20px"></span></div>
+          <div class="placeholder-glow d-flex"><span class="placeholder col-6 rounded-3" style="height:20px"></span></div>
+          <div class="placeholder-glow d-flex"><span class="placeholder col-9 rounded-3" style="height:20px"></span></div>
+        </div>
+      </div>
+      <!-- Material list (scrollable) -->
+      <div id="materialList" class="content-scroll" style="flex:1;overflow-y:auto"></div>
+      <!-- Pagination footer -->
+      <div id="paginationFooter" class="d-none px-4 py-2" style="border-top:1px solid var(--line);flex-shrink:0">
+        <div class="d-flex align-items-center justify-content-between">
+          <span class="muted small" id="paginationInfo"></span>
+          <nav>
+            <ul class="pagination pagination-sm mb-0" id="paginationNav" style="gap:2px"></ul>
+          </nav>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- View Material Modal -->
+<div class="modal fade" id="viewMatModal" tabindex="-1">
+  <div class="modal-dialog modal-lg modal-dialog-scrollable">
+    <div class="modal-content" style="border-radius:14px;border:none;box-shadow:0 20px 60px rgba(0,0,0,.12)">
+      <div class="modal-header border-0 pb-0 px-4 pt-4">
+        <h5 class="fw-bold" id="viewMatTitle" style="font-size:1.05rem">材料详情</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body px-4">
+        <div id="viewMatMeta" class="muted small mb-3 pb-2" style="border-bottom:1px solid var(--line)"></div>
+        <div id="viewMatContent" style="white-space:pre-wrap;line-height:1.8;font-size:.9rem;color:var(--ink)"></div>
+      </div>
+      <div class="modal-footer border-0 pt-0 px-4 pb-4 flex-wrap">
+        <button class="btn btn-outline-primary" id="copyMatBtn" style="border-radius:10px"><i class="bi bi-clipboard me-1"></i>复制内容</button>
+        <div class="btn-group">
+          <button class="btn btn-success" id="downloadMatPdfBtn" style="border-radius:10px 0 0 10px"><i class="bi bi-filetype-pdf me-1"></i>下载 PDF</button>
+          <button class="btn btn-success dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown" style="border-radius:0 10px 10px 0"></button>
+          <ul class="dropdown-menu dropdown-menu-end" style="border-radius:10px;border:1px solid var(--line);box-shadow:0 8px 24px rgba(0,0,0,.08)">
+            <li><a class="dropdown-item" href="#" id="exportMarkdownBtn"><i class="bi bi-markdown me-2" style="color:var(--brand)"></i>导出 Markdown</a></li>
+            <li><a class="dropdown-item" href="#" id="exportTxtBtn"><i class="bi bi-file-text me-2" style="color:var(--muted)"></i>导出纯文本 TXT</a></li>
+          </ul>
+        </div>
+        <button class="btn btn-outline-secondary" id="editFromViewBtn" style="border-radius:10px"><i class="bi bi-pencil me-1"></i>编辑</button>
+        <button class="btn btn-light" data-bs-dismiss="modal" style="border-radius:10px;border:1px solid var(--line)">关闭</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Rename Modal -->
+<div class="modal fade" id="renameMatModal" tabindex="-1">
+  <div class="modal-dialog modal-sm modal-dialog-centered">
+    <div class="modal-content" style="border-radius:14px;border:none;box-shadow:0 20px 60px rgba(0,0,0,.12)">
+      <div class="modal-header border-0 px-4 pt-4">
+        <h6 class="fw-bold" style="font-size:.95rem">重命名材料</h6>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body px-4 pt-2">
+        <input type="text" id="renameMatInput" class="form-control" placeholder="输入新标题" maxlength="256" style="border-radius:10px;border:1px solid var(--line);font-size:.9rem" />
+      </div>
+      <div class="modal-footer border-0 px-4 pb-4 pt-2">
+        <button class="btn btn-light" data-bs-dismiss="modal" style="border-radius:10px;border:1px solid var(--line);font-size:.85rem">取消</button>
+        <button class="btn btn-primary" id="renameMatConfirmBtn" style="border-radius:10px;font-size:.85rem"><i class="bi bi-check-lg me-1"></i>确认</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Delete Confirm Modal -->
+<div class="modal fade" id="deleteMatModal" tabindex="-1">
+  <div class="modal-dialog modal-sm modal-dialog-centered">
+    <div class="modal-content" style="border-radius:14px;border:none;box-shadow:0 20px 60px rgba(0,0,0,.12)">
+      <div class="modal-body px-4 pt-4 pb-3 text-center">
+        <i class="bi bi-exclamation-triangle" style="font-size:2.5rem;color:#ef4444;display:block;margin-bottom:12px"></i>
+        <h6 class="fw-bold mb-1">确认删除</h6>
+        <p class="muted small mb-0" id="deleteModalMsg">删除后不可恢复，确定要删除这份材料吗？</p>
+      </div>
+      <div class="modal-footer border-0 px-4 pb-4 pt-0 justify-content-center">
+        <button class="btn btn-light" data-bs-dismiss="modal" style="border-radius:10px;border:1px solid var(--line);font-size:.85rem">取消</button>
+        <button class="btn btn-danger" id="deleteMatConfirmBtn" style="border-radius:10px;font-size:.85rem"><i class="bi bi-trash me-1"></i>确认删除</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Edit Material Modal -->
+<div class="modal fade" id="editMatModal" tabindex="-1">
+  <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal-content" style="border-radius:14px;border:none;box-shadow:0 20px 60px rgba(0,0,0,.12)">
+      <div class="modal-header border-0 px-4 pt-4">
+        <h6 class="fw-bold" style="font-size:.95rem"><i class="bi bi-pencil me-2" style="color:var(--brand)"></i>编辑材料</h6>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body px-4 pt-2">
+        <label class="form-label small fw-medium text-muted mb-1">标题</label>
+        <input type="text" id="editMatTitleInput" class="form-control mb-3" placeholder="材料标题" maxlength="256" style="border-radius:10px;border:1px solid var(--line);font-size:.9rem" />
+        <label class="form-label small fw-medium text-muted mb-1">内容</label>
+        <textarea id="editMatContentInput" class="form-control" rows="15" placeholder="材料内容..." style="border-radius:10px;border:1px solid var(--line);font-size:.88rem;line-height:1.6;resize:vertical;font-family:system-ui,-apple-system,sans-serif"></textarea>
+      </div>
+      <div class="modal-footer border-0 px-4 pb-4 pt-2">
+        <button class="btn btn-light" data-bs-dismiss="modal" style="border-radius:10px;border:1px solid var(--line);font-size:.85rem">取消</button>
+        <button class="btn btn-primary" id="editMatConfirmBtn" style="border-radius:10px;font-size:.85rem"><i class="bi bi-check-lg me-1"></i>保存修改</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+.mat-item {
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--line);
+  cursor: pointer;
+  transition: background .15s ease, padding .15s ease;
+  position: relative;
+}
+.mat-item:hover {
+  background: var(--brand-subtle);
+}
+.mat-item:last-child { border-bottom: none; }
+.mat-item.batch-mode { padding-left: 48px; }
+.mat-item.batch-mode .mat-checkbox-wrap {
+  position: absolute;
+  left: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.mat-item[data-type="daily"],
+.mat-item[data-type="weekly"] { border-left: 3px solid #1a73e8; }
+.mat-item[data-type="archive_summary"] { border-left: 3px solid #7c3aed; }
+.mat-item[data-type="user_doc"] { border-left: 3px solid #22c55e; }
+.mat-item[data-type][data-pinned="true"] {
+  border-left-width: 4px;
+  background: linear-gradient(90deg, var(--brand-subtle) 0%, transparent 60%);
+}
+
+.mat-actions {
+  opacity: 0;
+  transition: opacity .15s ease;
+}
+.mat-item:hover .mat-actions {
+  opacity: 1;
+}
+
+@keyframes shimmer {
+  0% { background-position: -200px 0; }
+  100% { background-position: calc(200px + 100%) 0; }
+}
+.skeleton-line {
+  height: 16px;
+  border-radius: 8px;
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background-size: 200px 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+/* Stat cards */
+.stat-card {
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 8px 16px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: .82rem;
+  transition: .15s;
+}
+.stat-card:hover {
+  border-color: var(--brand);
+  box-shadow: 0 2px 8px rgba(0,0,0,.04);
+}
+.stat-num {
+  font-weight: 700;
+  font-size: 1.1rem;
+  color: var(--ink);
+  min-width: 20px;
+  text-align: center;
+}
+
+/* Pagination styling */
+.page-link {
+  border-radius: 8px !important;
+  border: 1px solid transparent !important;
+  color: var(--muted);
+  font-size: .8rem;
+  padding: 4px 10px;
+  margin: 0 1px;
+}
+.page-link:hover {
+  border-color: var(--brand) !important;
+  color: var(--brand);
+  background: var(--brand-subtle);
+}
+.page-item.active .page-link {
+  background: var(--brand) !important;
+  color: #fff !important;
+  border-color: var(--brand) !important;
+}
+.page-item.disabled .page-link {
+  opacity: .4;
+  pointer-events: none;
+}
+
+/* Stat dot */
+.stat-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+  flex-shrink: 0;
+}
+
+.empty-state-icon {
+  font-size: 3.5rem;
+  opacity: .25;
+  color: var(--muted);
+}
+
+.pin-badge {
+  font-size: .65rem;
+  background: var(--brand);
+  color: #fff;
+  border-radius: 4px;
+  padding: 1px 6px;
+  font-weight: 600;
+  vertical-align: middle;
+}
+
+@media (max-width: 576px) {
+  .mat-item { padding: 12px 14px; }
+  .mat-actions { opacity: 1; }
+  .stat-card { padding: 6px 10px; font-size: .75rem; }
+}
+</style>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+let currentPage = 1;
+let totalPages = 1;
+let totalItems = 0;
+let currentFilter = 'all';
+let currentSort = 'newest';
+let searchQuery = '';
+let currentMaterialId = null;
+let selectedIds = new Set();
+let allMaterialData = {}; // cache for loaded materials {id: material}
+
+const typeLabels = {
+  daily: '<span class="tag tag-pre">日报</span>',
+  weekly: '<span class="tag tag-in">周报</span>',
+  archive_summary: '<span class="tag" style="background:#f0e6ff;color:#7c3aed">群聊总结</span>',
+  user_doc: '<span class="tag" style="background:#e6f7ed;color:#166534">我的文档</span>',
+};
+
+const sourceLabels = {
+  report_generator: '报告生成器',
+  group_archive: '群聊归档',
+  user_save: '用户保存',
+};
+
+const dotColors = {
+  daily: '#1a73e8',
+  weekly: '#1a73e8',
+  archive_summary: '#7c3aed',
+  user_doc: '#22c55e',
+};
+
+const statLabels = {
+  daily: '日报',
+  weekly: '周报',
+  archive_summary: '群聊总结',
+  user_doc: '我的文档',
+};
+
+// ─── Tab switching ───
+document.querySelectorAll('.mat-tab').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.mat-tab').forEach(b => {
+      b.style.background = 'var(--brand-soft)';
+      b.style.color = 'var(--brand)';
+    });
+    btn.style.background = 'var(--brand)';
+    btn.style.color = '#fff';
+    currentFilter = btn.dataset.type;
+    currentPage = 1;
+    selectedIds.clear();
+    updateBatchUI();
+    loadMaterials();
+  });
+});
+
+// ─── Search ───
+const searchInput = document.getElementById('matSearchInput');
+const searchClear = document.getElementById('matSearchClear');
+let searchTimer = null;
+searchInput.addEventListener('input', () => {
+  clearTimeout(searchTimer);
+  searchTimer = setTimeout(() => {
+    searchQuery = searchInput.value.trim();
+    searchClear.classList.toggle('d-none', !searchQuery);
+    currentPage = 1;
+    selectedIds.clear();
+    updateBatchUI();
+    loadMaterials();
+  }, 300);
+});
+searchClear.addEventListener('click', () => {
+  searchInput.value = '';
+  searchQuery = '';
+  searchClear.classList.add('d-none');
+  currentPage = 1;
+  selectedIds.clear();
+  updateBatchUI();
+  loadMaterials();
+  searchInput.focus();
+});
+
+// ─── Sort ───
+document.getElementById('sortNewBtn').addEventListener('click', () => {
+  currentSort = 'newest';
+  document.getElementById('sortNewBtn').style.background = 'var(--brand)';
+  document.getElementById('sortNewBtn').style.color = '#fff';
+  document.getElementById('sortOldBtn').style.background = 'transparent';
+  document.getElementById('sortOldBtn').style.color = 'var(--muted)';
+  currentPage = 1;
+  loadMaterials();
+});
+document.getElementById('sortOldBtn').addEventListener('click', () => {
+  currentSort = 'oldest';
+  document.getElementById('sortOldBtn').style.background = 'var(--brand)';
+  document.getElementById('sortOldBtn').style.color = '#fff';
+  document.getElementById('sortNewBtn').style.background = 'transparent';
+  document.getElementById('sortNewBtn').style.color = 'var(--muted)';
+  currentPage = 1;
+  loadMaterials();
+});
+
+// ─── Load materials ───
+async function loadMaterials(){
+  const skeleton = document.getElementById('matSkeleton');
+  skeleton.classList.remove('d-none');
+  document.getElementById('materialList').innerHTML = '';
+  document.getElementById('paginationFooter').classList.add('d-none');
+  document.getElementById('batchSelectAllWrap').classList.add('d-none');
+
+  try {
+    const params = new URLSearchParams();
+    params.set('page', currentPage);
+    params.set('page_size', 15);
+    params.set('sort', currentSort);
+    if (currentFilter !== 'all') params.set('type', currentFilter);
+    if (searchQuery) params.set('q', searchQuery);
+    const r = await fetch(`/api/materials/?${params}`, {credentials:'include'});
+    const data = await r.json();
+    const materials = data.materials || [];
+    const pagination = data.pagination || {};
+    const stats = data.stats || {};
+
+    totalPages = pagination.total_pages || 1;
+    totalItems = pagination.total || 0;
+    currentPage = pagination.page || 1;
+
+    // Cache material data
+    materials.forEach(m => { allMaterialData[m.id] = m; });
+
+    renderStats(stats);
+    renderMaterials(materials);
+    renderPagination();
+    document.getElementById('matCount').textContent = `${totalItems} 项`;
+  } catch(e){ console.error(e); }
+  finally {
+    skeleton.classList.add('d-none');
+  }
+}
+
+// ─── Render stats ───
+function renderStats(stats){
+  const container = document.getElementById('matStats');
+  container.innerHTML = '';
+  const total = Object.values(stats).reduce((a, b) => a + b, 0);
+  const entries = [['all', '全部', total, '#6b7280'], ...Object.entries(statLabels)];
+  entries.forEach(([key, label]) => {
+    const count = key === 'all' ? total : (stats[key] || 0);
+    const color = dotColors[key] || '#6b7280';
+    const card = document.createElement('div');
+    card.className = 'stat-card';
+    card.innerHTML = `<span class="stat-dot" style="background:${color}"></span><span>${label}</span><span class="stat-num">${count}</span>`;
+    container.appendChild(card);
+  });
+}
+
+// ─── Render material items ───
+function renderMaterials(materials){
+  const container = document.getElementById('materialList');
+  container.innerHTML = '';
+  const batchMode = selectedIds.size > 0;
+  document.getElementById('batchSelectAllWrap').classList.toggle('d-none', materials.length === 0);
+
+  if (!materials.length) {
+    container.innerHTML = `
+      <div class="empty-state" style="padding:60px 20px;text-align:center;color:var(--muted)">
+        <i class="bi bi-file-earmark-text empty-state-icon d-block mb-3"></i>
+        <p style="font-size:.95rem;font-weight:500;color:var(--ink)">${searchQuery ? '未找到匹配的材料' : '暂无材料'}</p>
+        <p class="small">${searchQuery ? '试试换个关键词搜索' : '从报告生成或群聊总结创建你的第一份材料'}</p>
+      </div>`;
+    return;
+  }
+
+  const allOnPage = materials.every(m => selectedIds.has(m.id));
+  document.getElementById('batchSelectAll').checked = allOnPage && selectedIds.size > 0;
+
+  materials.forEach((m, idx) => {
+    const typeTag = typeLabels[m.report_type] || '<span class="tag tag-archived">其他</span>';
+    const source = sourceLabels[m.source] || m.source;
+    const borderColor = dotColors[m.report_type] || '#6b7280';
+    const delay = Math.min(idx * 30, 300);
+    const isSelected = selectedIds.has(m.id);
+
+    const div = document.createElement('div');
+    div.className = 'mat-item fade-in';
+    if (batchMode) div.classList.add('batch-mode');
+    div.dataset.type = m.report_type || '';
+    div.dataset.pinned = m.is_pinned ? 'true' : 'false';
+    div.style.animationDelay = `${delay}ms`;
+
+    const pinBadge = m.is_pinned ? '<span class="pin-badge ms-1"><i class="bi bi-pin-fill" style="font-size:.6rem"></i> 置顶</span>' : '';
+
+    div.innerHTML = `
+      <div class="d-flex align-items-start gap-3">
+        ${batchMode ? `<div class="mat-checkbox-wrap"><input type="checkbox" class="form-check-input mat-checkbox" data-id="${m.id}" ${isSelected ? 'checked' : ''} style="cursor:pointer" /></div>` : ''}
+        <div style="flex:1;min-width:0">
+          <div class="d-flex align-items-center gap-2 mb-1 flex-wrap">
+            ${m.is_pinned ? '<i class="bi bi-pin-fill" style="color:var(--brand);font-size:.75rem;flex-shrink:0"></i>' : ''}
+            <strong style="font-size:.95rem">${escHtml(m.title)}</strong>
+            ${pinBadge}
+            ${typeTag}
+          </div>
+          <div class="muted small mb-2" style="display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;font-size:.82rem">
+            ${escHtml((m.content || '').substring(0, 240))}
+          </div>
+          <div class="d-flex align-items-center justify-content-between">
+            <div class="d-flex align-items-center gap-3 muted" style="font-size:.72rem">
+              <span><i class="bi bi-tag me-1"></i>${source}</span>
+              <span><i class="bi bi-clock me-1"></i>${formatDate(m.updated_at || m.created_at)}</span>
+              ${m.updated_at !== m.created_at ? '<span class="text-muted" style="font-size:.65rem">(已编辑)</span>' : ''}
+            </div>
+            <div class="mat-actions d-flex gap-1" onclick="event.stopPropagation()">
+              <button class="btn btn-sm btn-light border" onclick="event.stopPropagation();togglePin(${m.id})" title="${m.is_pinned ? '取消置顶' : '置顶'}" style="border-radius:8px;padding:2px 8px;font-size:.72rem;border:1px solid var(--line)">
+                <i class="bi ${m.is_pinned ? 'bi-pin-fill' : 'bi-pin'}" style="color:var(--brand)"></i>
+              </button>
+              <button class="btn btn-sm btn-light border" onclick="event.stopPropagation();editMaterialById(${m.id})" title="编辑" style="border-radius:8px;padding:2px 8px;font-size:.72rem;border:1px solid var(--line)">
+                <i class="bi bi-pencil" style="color:var(--brand)"></i>
+              </button>
+              <button class="btn btn-sm btn-light border" onclick="event.stopPropagation();window.open('/api/materials/${m.id}/pdf/','_blank')" title="下载 PDF" style="border-radius:8px;padding:2px 8px;font-size:.72rem;border:1px solid var(--line)">
+                <i class="bi bi-filetype-pdf" style="color:#dc2626"></i>
+              </button>
+              <button class="btn btn-sm btn-light border" onclick="event.stopPropagation();copyContentShort('${escHtmlAttr((m.content || '').substring(0, 500))}')" title="复制内容" style="border-radius:8px;padding:2px 8px;font-size:.72rem;border:1px solid var(--line)">
+                <i class="bi bi-clipboard" style="color:var(--muted)"></i>
+              </button>
+              <button class="btn btn-sm btn-light border" onclick="event.stopPropagation();deleteMaterial(${m.id})" title="删除" style="border-radius:8px;padding:2px 8px;font-size:.72rem;border:1px solid var(--line)">
+                <i class="bi bi-trash" style="color:#ef4444"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+        <i class="bi bi-chevron-right muted" style="flex-shrink:0;margin-top:4px;font-size:.8rem"></i>
+      </div>
+    `;
+
+    // Click to view (unless clicking checkbox)
+    if (batchMode) {
+      const cb = div.querySelector('.mat-checkbox');
+      cb.addEventListener('change', (e) => {
+        e.stopPropagation();
+        const id = parseInt(cb.dataset.id);
+        if (cb.checked) selectedIds.add(id);
+        else selectedIds.delete(id);
+        updateBatchUI();
+      });
+      div.onclick = (e) => {
+        if (e.target.closest('.mat-checkbox-wrap') || e.target.closest('.mat-actions')) return;
+        cb.checked = !cb.checked;
+        cb.dispatchEvent(new Event('change'));
+      };
+    } else {
+      div.onclick = () => openMaterial(m);
+    }
+
+    container.appendChild(div);
+  });
+}
+
+// ─── Pagination ───
+function renderPagination(){
+  const footer = document.getElementById('paginationFooter');
+  if (totalPages <= 1 && totalItems <= 15) {
+    footer.classList.add('d-none');
+    return;
+  }
+  footer.classList.remove('d-none');
+  document.getElementById('paginationInfo').textContent = `第 ${currentPage}/${totalPages} 页，共 ${totalItems} 项`;
+
+  const nav = document.getElementById('paginationNav');
+  nav.innerHTML = '';
+
+  const addPage = (num, label, disabled, active) => {
+    const li = document.createElement('li');
+    li.className = `page-item ${disabled ? 'disabled' : ''} ${active ? 'active' : ''}`;
+    const a = document.createElement('a');
+    a.className = 'page-link';
+    a.href = '#';
+    a.textContent = label || num;
+    if (!disabled) {
+      a.addEventListener('click', (e) => {
+        e.preventDefault();
+        goToPage(num);
+      });
+    }
+    li.appendChild(a);
+    nav.appendChild(li);
+  };
+
+  addPage(currentPage - 1, '‹', !(currentPage > 1), false);
+
+  // Build page range
+  const range = [];
+  const maxVisible = 5;
+  let start = Math.max(1, currentPage - Math.floor(maxVisible / 2));
+  let end = Math.min(totalPages, start + maxVisible - 1);
+  if (end - start + 1 < maxVisible) {
+    start = Math.max(1, end - maxVisible + 1);
+  }
+  if (start > 1) {
+    addPage(1, '1', false, false);
+    if (start > 2) {
+      const li = document.createElement('li');
+      li.className = 'page-item disabled';
+      li.innerHTML = '<span class="page-link">…</span>';
+      nav.appendChild(li);
+    }
+  }
+  for (let i = start; i <= end; i++) {
+    addPage(i, String(i), false, i === currentPage);
+  }
+  if (end < totalPages) {
+    if (end < totalPages - 1) {
+      const li = document.createElement('li');
+      li.className = 'page-item disabled';
+      li.innerHTML = '<span class="page-link">…</span>';
+      nav.appendChild(li);
+    }
+    addPage(totalPages, String(totalPages), false, false);
+  }
+
+  addPage(currentPage + 1, '›', !(currentPage < totalPages), false);
+}
+
+function goToPage(page){
+  if (page < 1 || page > totalPages) return;
+  currentPage = page;
+  selectedIds.clear();
+  updateBatchUI();
+  loadMaterials();
+  // Scroll list to top
+  document.getElementById('materialList').scrollTop = 0;
+}
+
+// ─── Batch select all ───
+document.getElementById('batchSelectAll').addEventListener('change', (e) => {
+  const checked = e.target.checked;
+  const cbs = document.querySelectorAll('.mat-checkbox');
+  cbs.forEach(cb => {
+    cb.checked = checked;
+    const id = parseInt(cb.dataset.id);
+    if (checked) selectedIds.add(id);
+    else selectedIds.delete(id);
+  });
+  updateBatchUI();
+});
+
+function updateBatchUI(){
+  const btn = document.getElementById('batchDeleteBtn');
+  const count = selectedIds.size;
+  if (count > 0) {
+    btn.classList.remove('d-none');
+    document.getElementById('batchCount').textContent = count;
+    document.querySelectorAll('.mat-item').forEach(el => el.classList.add('batch-mode'));
+  } else {
+    btn.classList.add('d-none');
+    document.querySelectorAll('.mat-item').forEach(el => el.classList.remove('batch-mode'));
+  }
+  document.getElementById('batchSelectAllWrap').classList.toggle('d-none', document.querySelectorAll('.mat-checkbox').length === 0);
+}
+
+// ─── Batch delete ───
+document.getElementById('batchDeleteBtn').addEventListener('click', () => {
+  if (selectedIds.size === 0) return;
+  document.getElementById('deleteModalMsg').textContent = `确定要删除选中的 ${selectedIds.size} 项材料吗？删除后不可恢复。`;
+  deleteMatId = 'batch';
+  new bootstrap.Modal(document.getElementById('deleteMatModal')).show();
+});
+
+// ─── Toggle pin ───
+async function togglePin(id){
+  try {
+    const r = await fetch(`/api/materials/${id}/toggle-pin/`, {
+      method: 'POST', credentials: 'include',
+    });
+    if (!r.ok) { showToast('操作失败', 'danger'); return; }
+    const data = await r.json();
+    showToast(data.is_pinned ? '已置顶' : '已取消置顶', 'success');
+    // Update cache
+    if (allMaterialData[id]) allMaterialData[id].is_pinned = data.is_pinned;
+    loadMaterials();
+  } catch(e) { showToast('网络错误', 'danger'); }
+}
+
+// ─── View material ───
+function openMaterial(m){
+  currentMaterialId = m.id;
+  // Store full content (from cache or fetched separately)
+  allMaterialData[m.id] = m;
+  document.getElementById('viewMatTitle').textContent = m.title;
+  const meta = document.getElementById('viewMatMeta');
+  const typeTag = typeLabels[m.report_type] || '';
+  const source = sourceLabels[m.source] || m.source;
+  const updatedStr = m.updated_at && m.updated_at !== m.created_at
+    ? ` · 编辑于 ${new Date(m.updated_at).toLocaleString('zh-CN')}`
+    : '';
+  meta.innerHTML = `${typeTag} <span class="muted ms-2">${source} · ${new Date(m.created_at).toLocaleString('zh-CN')}${updatedStr}</span>`;
+  document.getElementById('viewMatContent').textContent = m.content;
+  new bootstrap.Modal(document.getElementById('viewMatModal')).show();
+}
+
+// ─── Export ───
+document.getElementById('exportMarkdownBtn').addEventListener('click', (e) => {
+  e.preventDefault();
+  if (currentMaterialId) window.open(`/api/materials/${currentMaterialId}/export/?format=markdown`, '_blank');
+});
+document.getElementById('exportTxtBtn').addEventListener('click', (e) => {
+  e.preventDefault();
+  if (currentMaterialId) window.open(`/api/materials/${currentMaterialId}/export/?format=txt`, '_blank');
+});
+
+// ─── Clipboard ───
+function copyContent(text){
+  navigator.clipboard.writeText(text).then(() => {
+    showToast('内容已复制到剪贴板', 'success');
+  }).catch(() => {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    ta.remove();
+    showToast('内容已复制到剪贴板', 'success');
+  });
+}
+function copyContentShort(text){ copyContent(text); }
+
+document.getElementById('copyMatBtn').addEventListener('click', () => {
+  const content = document.getElementById('viewMatContent').textContent;
+  copyContent(content);
+});
+
+document.getElementById('downloadMatPdfBtn').addEventListener('click', () => {
+  if (currentMaterialId) {
+    window.open(`/api/materials/${currentMaterialId}/pdf/`, '_blank');
+  } else {
+    showToast('请先选择一份材料', 'warning');
+  }
+});
+
+// ─── Rename ───
+let renameMatId = null;
+function renameMaterial(id, currentTitle){
+  renameMatId = id;
+  document.getElementById('renameMatInput').value = currentTitle;
+  const modal = new bootstrap.Modal(document.getElementById('renameMatModal'));
+  modal.show();
+  setTimeout(() => document.getElementById('renameMatInput').focus(), 200);
+}
+document.getElementById('renameMatConfirmBtn').addEventListener('click', async () => {
+  const title = document.getElementById('renameMatInput').value.trim();
+  if (!title) { showToast('标题不能为空', 'warning'); return; }
+  try {
+    const r = await fetch(`/api/materials/${renameMatId}/rename/`, {
+      method: 'POST', credentials: 'include',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({title}),
+    });
+    if (!r.ok) { showToast('重命名失败', 'danger'); return; }
+    bootstrap.Modal.getInstance(document.getElementById('renameMatModal')).hide();
+    showToast('重命名成功', 'success');
+    loadMaterials();
+  } catch(e) { showToast('网络错误', 'danger'); }
+});
+
+// ─── Delete ───
+let deleteMatId = null;
+function deleteMaterial(id){
+  deleteMatId = id;
+  document.getElementById('deleteModalMsg').textContent = '删除后不可恢复，确定要删除这份材料吗？';
+  new bootstrap.Modal(document.getElementById('deleteMatModal')).show();
+}
+document.getElementById('deleteMatConfirmBtn').addEventListener('click', async () => {
+  if (deleteMatId === 'batch') {
+    // Batch delete
+    try {
+      const r = await fetch('/api/materials/batch-delete/', {
+        method: 'POST', credentials: 'include',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ids: Array.from(selectedIds)}),
+      });
+      if (!r.ok) { showToast('批量删除失败', 'danger'); return; }
+      bootstrap.Modal.getInstance(document.getElementById('deleteMatModal')).hide();
+      showToast('批量删除成功', 'success');
+      selectedIds.clear();
+      updateBatchUI();
+      loadMaterials();
+    } catch(e) { showToast('网络错误', 'danger'); }
+    finally { deleteMatId = null; }
+    return;
+  }
+  if (!deleteMatId) return;
+  try {
+    const r = await fetch(`/api/materials/${deleteMatId}/delete/`, {
+      method: 'POST', credentials: 'include',
+    });
+    if (!r.ok) { showToast('删除失败', 'danger'); return; }
+    bootstrap.Modal.getInstance(document.getElementById('deleteMatModal')).hide();
+    const viewModal = bootstrap.Modal.getInstance(document.getElementById('viewMatModal'));
+    if (viewModal) viewModal.hide();
+    showToast('已删除', 'success');
+    delete allMaterialData[deleteMatId];
+    // If last item on page, go back
+    if (totalItems > 1 && document.querySelectorAll('.mat-item').length <= 1 && currentPage > 1) {
+      currentPage--;
+    }
+    loadMaterials();
+  } catch(e) { showToast('网络错误', 'danger'); }
+  finally { deleteMatId = null; }
+});
+
+// ─── Edit ───
+let editMatId = null;
+function editMaterialById(id){
+  const m = allMaterialData[id];
+  if (!m) return;
+  editMatId = id;
+  document.getElementById('editMatTitleInput').value = m.title;
+  document.getElementById('editMatContentInput').value = m.content;
+  new bootstrap.Modal(document.getElementById('editMatModal')).show();
+}
+
+document.getElementById('editMatConfirmBtn').addEventListener('click', async () => {
+  const title = document.getElementById('editMatTitleInput').value.trim();
+  const content = document.getElementById('editMatContentInput').value.trim();
+  if (!title) { showToast('标题不能为空', 'warning'); return; }
+  if (!content) { showToast('内容不能为空', 'warning'); return; }
+  try {
+    const r = await fetch(`/api/materials/${editMatId}/edit/`, {
+      method: 'POST', credentials: 'include',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({title, content}),
+    });
+    if (!r.ok) { showToast('保存失败', 'danger'); return; }
+    bootstrap.Modal.getInstance(document.getElementById('editMatModal')).hide();
+    showToast('保存成功', 'success');
+    // Update cache
+    if (allMaterialData[editMatId]) {
+      allMaterialData[editMatId].title = title;
+      allMaterialData[editMatId].content = content;
+      allMaterialData[editMatId].updated_at = new Date().toISOString();
+    }
+    loadMaterials();
+  } catch(e) { showToast('网络错误', 'danger'); }
+});
+
+document.getElementById('editFromViewBtn').addEventListener('click', () => {
+  if (!currentMaterialId) return;
+  bootstrap.Modal.getInstance(document.getElementById('viewMatModal')).hide();
+  setTimeout(() => editMaterialById(currentMaterialId), 300);
+});
+
+// ─── Formatting helpers ───
+function formatDate(isoStr){
+  try {
+    const d = new Date(isoStr);
+    const now = new Date();
+    const diff = (now - d) / 1000;
+    if (diff < 60) return '刚刚';
+    if (diff < 3600) return `${Math.floor(diff/60)} 分钟前`;
+    if (diff < 86400) return `${Math.floor(diff/3600)} 小时前`;
+    if (diff < 172800) return '昨天';
+    return d.toLocaleDateString('zh-CN', {month:'short', day:'numeric'});
+  } catch(e) { return isoStr; }
+}
+
+function escHtml(s){
+  if (!s) return '';
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+function escHtmlAttr(s){
+  if (!s) return '';
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
+// ─── Init ───
+document.addEventListener('DOMContentLoaded', () => {
+  loadMaterials();
+});
+</script>
+{% endblock %}

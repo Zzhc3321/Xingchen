@@ -20,7 +20,7 @@
   <div class="container-fluid">
     <div class="row align-items-center">
       <div class="col">
-        <div class="muted" style="font-size:.9rem">管理售前、售中、售后事件，创建协同群聊，归档已完成任务</div>
+        <div class="muted" style="font-size:.78rem"><i class="bi bi-info-circle me-1"></i>管理售前、售中、售后事件，创建协同群聊，归档已完成任务</div>
       </div>
     </div>
   </div>
@@ -28,12 +28,13 @@
 <div class="app-content page-content">
 <div class="container-fluid" style="height:100%;display:flex;flex-direction:column">
 
-  <!-- Stats Row -->
-  <div class="row g-3 mb-3" id="statsRow">
-    <div class="col-md-3 col-6"><div class="card p-3 text-center border-0 shadow-sm"><div class="h5 mb-0 fw-bold" style="color:var(--brand)" id="statTotal">-</div><div class="muted small">全部事件</div></div></div>
-    <div class="col-md-3 col-6"><div class="card p-3 text-center border-0 shadow-sm"><div class="h5 mb-0 fw-bold" style="color:#1d4ed8" id="statPre">-</div><div class="muted small">售前</div></div></div>
-    <div class="col-md-3 col-6"><div class="card p-3 text-center border-0 shadow-sm"><div class="h5 mb-0 fw-bold" style="color:#065f46" id="statIn">-</div><div class="muted small">售中</div></div></div>
-    <div class="col-md-3 col-6"><div class="card p-3 text-center border-0 shadow-sm"><div class="h5 mb-0 fw-bold" style="color:#92400e" id="statAfter">-</div><div class="muted small">售后</div></div></div>
+  <!-- Stats Row (compact) -->
+  <div class="d-flex align-items-center gap-3 mb-3 flex-wrap" id="statsRow" style="font-size:.78rem">
+    <span><strong style="color:var(--brand)" id="statTotal">-</strong> <span class="muted">全部事件</span></span>
+    <span class="muted">|</span>
+    <span><strong style="color:#1d4ed8" id="statPre">-</strong> <span class="muted">售前</span></span>
+    <span><strong style="color:#065f46" id="statIn">-</strong> <span class="muted">售中</span></span>
+    <span><strong style="color:#92400e" id="statAfter">-</strong> <span class="muted">售后</span></span>
   </div>
 
   <!-- Main Card -->
@@ -63,7 +64,15 @@
     </div>
     <div class="card-body p-0" style="flex:1;overflow:hidden">
       <div id="eventList" class="content-scroll p-3" style="height:100%"></div>
-      <div id="archivedList" class="content-scroll p-3" style="height:100%;display:none"></div>
+    </div>
+    <!-- Pagination footer -->
+    <div id="paginationFooter" class="d-none px-4 py-2" style="border-top:1px solid var(--line);flex-shrink:0">
+      <div class="d-flex align-items-center justify-content-between">
+        <span class="muted small" id="paginationInfo"></span>
+        <nav>
+          <ul class="pagination pagination-sm mb-0" id="paginationNav" style="gap:2px"></ul>
+        </nav>
+      </div>
     </div>
   </div>
 </div>
@@ -180,13 +189,40 @@
 {% endblock %}
 
 {% block extra_scripts %}
+<style>
+.page-link {
+  border-radius: 8px !important;
+  border: 1px solid transparent !important;
+  color: var(--muted);
+  font-size: .8rem;
+  padding: 4px 10px;
+  margin: 0 1px;
+}
+.page-link:hover {
+  border-color: var(--brand) !important;
+  color: var(--brand);
+  background: var(--brand-subtle);
+}
+.page-item.active .page-link {
+  background: var(--brand) !important;
+  color: #fff !important;
+  border-color: var(--brand) !important;
+}
+.page-item.disabled .page-link {
+  opacity: .4;
+  pointer-events: none;
+}
+.event-card { transition: all .15s ease; }
+.event-card:hover { background: var(--soft); margin: 0 -12px; padding: 14px 12px !important; border-radius: 10px; }
+</style>
 <script>
 // ===== State =====
-let allEvents = [];
 let currentCat = 'all';
 let currentTag = '';
 let currentPriority = '';
+let currentPage = 1;
 let showArchived = false;
+let pagination = { page:1, total:0, total_pages:1, has_prev:false, has_next:false };
 let selectedMembers = [];
 let selectedGroupMembers = [];
 let createEventTargetId = null;
@@ -204,20 +240,26 @@ const priorityMap = {
   low: {label:'低', color:'#22c55e', icon:'bi-arrow-down'},
 };
 
-// ===== Load events =====
-async function loadEvents(category, searchTerm){
+// ===== Load events with pagination =====
+async function loadEvents(category, searchTerm, page){
   try {
+    if(page !== undefined) currentPage = page;
     const params = new URLSearchParams();
     if(category && category !== 'all') params.set('category', category);
     if(searchTerm) params.set('search', searchTerm);
     if(currentTag) params.set('tag', currentTag);
+    if(currentPriority) params.set('priority', currentPriority);
+    params.set('status', showArchived ? 'archived' : 'active');
+    params.set('page', currentPage);
+    params.set('page_size', 15);
     const qs = params.toString();
     const url = '/api/events/' + (qs ? `?${qs}` : '');
     const r = await fetch(url, {credentials:'include'});
     const data = await r.json();
-    allEvents = data.events || [];
+    pagination = data.pagination || { page:1, total:0, total_pages:1, has_prev:false, has_next:false };
     updateStats(data.counts || {});
-    renderEvents();
+    renderEvents(data.events || []);
+    renderPagination();
   } catch(e){ console.error(e); }
 }
 
@@ -229,23 +271,16 @@ function updateStats(counts){
   document.getElementById('statAfter').textContent = counts.after_sales || 0;
 }
 
-function renderEvents(){
-  const container = showArchived ? document.getElementById('archivedList') : document.getElementById('eventList');
+function renderEvents(events){
+  const container = document.getElementById('eventList');
   container.innerHTML = '';
 
-  let filtered = allEvents;
-  if(!showArchived) filtered = filtered.filter(e => e.status !== 'archived');
-  else filtered = filtered.filter(e => e.status === 'archived');
-
-  if(currentCat !== 'all') filtered = filtered.filter(e => e.category === currentCat);
-  if(currentPriority) filtered = filtered.filter(e => e.priority === currentPriority);
-
-  if(!filtered.length){
+  if(!events.length){
     container.innerHTML = `<div class="empty-state"><i class="bi bi-inbox"></i><p>${showArchived ? '暂无归档事件' : '暂无事件，点击上方「新建事件」创建'}</p></div>`;
     return;
   }
 
-  filtered.forEach(e => {
+  events.forEach(e => {
     const cat = catMap[e.category];
     const catTag = cat ? `<span class="tag ${cat.cls}">${cat.label}</span>` : '';
     const tagsHtml = (e.tags || []).map(t => `<span class="tag" style="background:${t.color}22;color:${t.color};font-size:.65rem">${t.name}</span>`).join('');
@@ -261,11 +296,9 @@ function renderEvents(){
     const amountStr = e.amount ? `¥${parseFloat(e.amount).toLocaleString('zh-CN', {minimumFractionDigits:2})}` : '';
 
     const div = document.createElement('div');
-    div.className = 'event-item fade-in';
+    div.className = 'event-card';
     const hasGroup = e.group_id && !e.group_archived;
     div.style.cssText = 'padding:14px 0;border-bottom:1px solid var(--line);transition:.1s';
-    div.onmouseover = () => { div.style.background = 'var(--soft)'; div.style.margin = '0 -12px'; div.style.padding = '14px 12px'; div.style.borderRadius = '10px'; };
-    div.onmouseout = () => { div.style.background = ''; div.style.margin = '0'; div.style.padding = '14px 0'; div.style.borderRadius = '0'; };
     div.innerHTML = `
       <div class="d-flex justify-content-between align-items-start">
         <div style="flex:1">
@@ -310,6 +343,7 @@ function renderEvents(){
     container.appendChild(div);
   });
 
+  // Event delegation for action buttons
   container.querySelectorAll('.create-group-btn').forEach(b => {
     b.addEventListener('click', () => openCreateGroup(b.dataset.id));
   });
@@ -324,6 +358,76 @@ function renderEvents(){
   });
 }
 
+function renderPagination(){
+  const footer = document.getElementById('paginationFooter');
+  if (pagination.total_pages <= 1 && pagination.total <= 15) {
+    footer.classList.add('d-none');
+    return;
+  }
+  footer.classList.remove('d-none');
+  document.getElementById('paginationInfo').textContent = `第 ${pagination.page}/${pagination.total_pages} 页，共 ${pagination.total} 项`;
+
+  const nav = document.getElementById('paginationNav');
+  nav.innerHTML = '';
+
+  const addPage = (num, label, disabled, active) => {
+    const li = document.createElement('li');
+    li.className = `page-item ${disabled ? 'disabled' : ''} ${active ? 'active' : ''}`;
+    const a = document.createElement('a');
+    a.className = 'page-link';
+    a.href = '#';
+    a.textContent = label || num;
+    if (!disabled) {
+      a.addEventListener('click', (e) => {
+        e.preventDefault();
+        goToPage(num);
+      });
+    }
+    li.appendChild(a);
+    nav.appendChild(li);
+  };
+
+  addPage(pagination.page - 1, '‹', !(pagination.page > 1), false);
+
+  // Build page range
+  const maxVisible = 5;
+  let start = Math.max(1, pagination.page - Math.floor(maxVisible / 2));
+  let end = Math.min(pagination.total_pages, start + maxVisible - 1);
+  if (end - start + 1 < maxVisible) {
+    start = Math.max(1, end - maxVisible + 1);
+  }
+  if (start > 1) {
+    addPage(1, '1', false, false);
+    if (start > 2) {
+      const li = document.createElement('li');
+      li.className = 'page-item disabled';
+      li.innerHTML = '<span class="page-link">…</span>';
+      nav.appendChild(li);
+    }
+  }
+  for (let i = start; i <= end; i++) {
+    addPage(i, String(i), false, i === pagination.page);
+  }
+  if (end < pagination.total_pages) {
+    if (end < pagination.total_pages - 1) {
+      const li = document.createElement('li');
+      li.className = 'page-item disabled';
+      li.innerHTML = '<span class="page-link">…</span>';
+      nav.appendChild(li);
+    }
+    addPage(pagination.total_pages, String(pagination.total_pages), false, false);
+  }
+
+  addPage(pagination.page + 1, '›', !(pagination.page < pagination.total_pages), false);
+}
+
+function goToPage(page){
+  if (page < 1 || page > pagination.total_pages) return;
+  currentPage = page;
+  loadEvents(currentCat, document.getElementById('eventSearchInput').value.trim());
+  document.getElementById('eventList').scrollTop = 0;
+}
+
 // ===== Category tabs =====
 document.querySelectorAll('.cat-btn').forEach(btn => {
   btn.addEventListener('click', () => {
@@ -335,7 +439,8 @@ document.querySelectorAll('.cat-btn').forEach(btn => {
       b.classList.remove('btn-primary', 'btn-outline-primary');
     });
     currentCat = btn.dataset.cat;
-    renderEvents();
+    currentPage = 1;
+    loadEvents(currentCat, document.getElementById('eventSearchInput').value.trim());
   });
 });
 document.querySelectorAll('.cat-btn').forEach(b => { b.classList.add('btn-outline-secondary'); });
@@ -346,11 +451,9 @@ document.querySelector('.cat-btn.active')?.classList.add('btn-primary');
 document.getElementById('showArchiveBtn').addEventListener('click', () => {
   showArchived = !showArchived;
   const btn = document.getElementById('showArchiveBtn');
-  document.getElementById('eventList').style.display = showArchived ? 'none' : 'block';
-  document.getElementById('archivedList').style.display = showArchived ? 'block' : 'none';
   btn.innerHTML = showArchived ? '<i class="bi bi-list-ul me-1"></i>事件列表' : '<i class="bi bi-archive me-1"></i>归档';
-  if(showArchived) loadEvents();
-  else renderEvents();
+  currentPage = 1;
+  loadEvents(currentCat, document.getElementById('eventSearchInput').value.trim());
 });
 
 // ===== Create Event =====
@@ -415,13 +518,16 @@ document.getElementById('saveEventBtn').addEventListener('click', async () => {
   selectedMembers = [];
   renderMemberTags();
   document.getElementById('evMemberResults').innerHTML = '';
+  currentPage = 1;
   loadEvents(currentCat);
 });
 
 // ===== Create Group =====
 async function openCreateGroup(eventId){
   createEventTargetId = parseInt(eventId);
-  const ev = allEvents.find(e => e.id === parseInt(eventId));
+  // Fetch event detail for the modal
+  const r = await fetch(`/api/events/${eventId}/`, {credentials:'include'});
+  const ev = await r.json();
   if(!ev) return;
   document.getElementById('groupEventInfo').textContent = `为「${ev.title}」创建协同群聊`;
   document.getElementById('grpTitle').value = ev.title + ' - 协同群';
@@ -480,6 +586,7 @@ document.getElementById('saveGroupBtn').addEventListener('click', async () => {
   if(!r.ok){ showToast(data.detail || '创建失败', 'danger'); return; }
   showToast('协同群创建成功');
   bootstrap.Modal.getInstance(document.getElementById('createGroupModal')).hide();
+  currentPage = 1;
   loadEvents(currentCat);
   if(data.group_id) location.href = '/chat/?conv=' + data.group_id;
 });
@@ -492,7 +599,7 @@ async function archiveEvent(eventId){
   });
   if(!r.ok){ showToast('归档失败', 'danger'); return; }
   showToast('事件已归档');
-  loadEvents(currentCat);
+  loadEvents(currentCat, document.getElementById('eventSearchInput').value.trim());
 }
 
 async function restoreEvent(eventId){
@@ -506,7 +613,7 @@ async function restoreEvent(eventId){
     return;
   }
   showToast('事件已恢复');
-  loadEvents(currentCat);
+  loadEvents(currentCat, document.getElementById('eventSearchInput').value.trim());
 }
 
 // ===== Search =====
@@ -514,6 +621,7 @@ let searchTimer = null;
 document.getElementById('eventSearchInput').addEventListener('input', function(){
   clearTimeout(searchTimer);
   searchTimer = setTimeout(() => {
+    currentPage = 1;
     loadEvents(currentCat, this.value.trim());
   }, 300);
 });
@@ -521,12 +629,14 @@ document.getElementById('eventSearchInput').addEventListener('input', function()
 // ===== Tag filter =====
 document.getElementById('tagFilter').addEventListener('change', function(){
   currentTag = this.value;
+  currentPage = 1;
   loadEvents(currentCat, document.getElementById('eventSearchInput').value.trim());
 });
 
 document.getElementById('priorityFilter').addEventListener('change', function(){
   currentPriority = this.value;
-  renderEvents();
+  currentPage = 1;
+  loadEvents(currentCat, document.getElementById('eventSearchInput').value.trim());
 });
 
 // ===== Load tags for filter dropdown =====

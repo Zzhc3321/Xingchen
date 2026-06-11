@@ -104,6 +104,18 @@ def notify_group_invite(user_id, group_id, group_title, inviter_name):
     )
 
 
+def notify_group_archived_summary(user_id, group_id, group_title, summary_preview):
+    """Notify a user that a group was archived with a summary."""
+    save_and_notify(
+        user_id,
+        'group_archived_with_summary',
+        '群聊归档总结',
+        f'群聊「{group_title}」已归档，AI 总结已生成：{summary_preview[:80]}',
+        related_id=group_id,
+        action_url=f'/materials/?conv={group_id}',
+    )
+
+
 def notify_task_assigned(user_id, task_id, task_title, assigner_name):
     """Notify a user that a task has been assigned to them."""
     save_and_notify(

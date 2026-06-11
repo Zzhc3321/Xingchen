@@ -102,6 +102,7 @@ class Notification(models.Model):
         ('group_created', '建群通知'),
         ('group_invite', '群聊邀请'),
         ('task_assigned', '任务派单'),
+        ('group_archived_with_summary', '群聊归档总结'),
         ('system', '系统通知'),
     ]
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='notifications', verbose_name='用户')

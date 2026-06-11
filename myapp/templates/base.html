@@ -348,6 +348,7 @@
             <li class="nav-item"><a href="/dashboard/" class="nav-link {% if active_nav == 'dashboard' %}active{% endif %}"><i class="bi bi-speedometer2"></i><p>门户工作台</p></a></li>
             <li class="nav-item"><a href="/events/" class="nav-link {% if active_nav == 'events' %}active{% endif %}"><i class="bi bi-calendar-event"></i><p>事件中心</p></a></li>
             <li class="nav-item"><a href="/chat/" class="nav-link {% if active_nav == 'chat' %}active{% endif %}"><i class="bi bi-chat-dots"></i><p>即时通讯</p></a></li>
+            <li class="nav-item"><a href="/materials/" class="nav-link {% if active_nav == 'materials' %}active{% endif %}"><i class="bi bi-folder"></i><p>我的材料</p></a></li>
             <li class="nav-item"><a href="/friends/" class="nav-link {% if active_nav == 'friends' %}active{% endif %}"><i class="bi bi-people"></i><p>好友与申请</p></a></li>
             <li class="nav-item"><a href="/profile/" class="nav-link {% if active_nav == 'profile' %}active{% endif %}"><i class="bi bi-person-circle"></i><p>个人中心</p></a></li>
           </ul>
@@ -480,6 +481,7 @@ const NOTIF_CONFIG = {
   group_created: { icon: 'bi-people', color: '#7c3aed', toast: true, label: '建群通知' },
   group_invite: { icon: 'bi-person-plus', color: '#f59e0b', toast: true, label: '群聊邀请' },
   task_assigned: { icon: 'bi-check2-square', color: '#0891b2', toast: true, label: '任务派单' },
+  group_archived_with_summary: { icon: 'bi-file-text', color: '#7c3aed', toast: true, label: '群聊归档总结' },
   system: { icon: 'bi-megaphone', color: '#64748b', toast: true, label: '系统通知' },
 };
 
@@ -662,6 +664,172 @@ document.getElementById('logoutBtn')?.addEventListener('click', async (e) => {
   await fetch('/api/auth/logout/', {method:'POST', credentials:'include'});
   window.location.href='/auth/login/';
 });
+</script>
+<!-- Dify AI Chatbot -->
+<script>
+  window.difyChatbotConfig = {
+    token: 'OUggNI0Oaun0M33N',
+    baseUrl: 'http://81.70.230.110:8088',
+    inputs: {},
+    systemVariables: {},
+    userVariables: {},
+  }
+</script>
+<script
+  src="http://81.70.230.110:8088/embed.min.js"
+  id="OUggNI0Oaun0M33N"
+  defer>
+</script>
+<style>
+  #dify-chatbot-bubble-button {
+    background-color: #1C64F2 !important;
+    cursor: grab !important;
+    user-select: none !important;
+    touch-action: none !important;
+  }
+  #dify-chatbot-bubble-button:active { cursor: grabbing !important; }
+  #dify-chatbot-bubble-window {
+    width: 24rem !important;
+    height: 40rem !important;
+  }
+  #dify-chatbot-bubble-window [href*="dify"],
+  #dify-chatbot-bubble-window a[href*="dify"] {
+    display: none !important;
+  }
+</style>
+<script>
+// Make Dify chatbot bubble draggable (intercepts click on drag)
+(function() {
+  var KEY = 'dify_bubble_offset';
+  var bubble = null;
+  var startX, startY, offsetX = 0, offsetY = 0, moved = false;
+  var winPollTimer = null;
+
+  function applyOffset(el) {
+    if (el) el.style.transform = 'translate(' + offsetX + 'px, ' + offsetY + 'px)';
+  }
+
+  function hideBranding() {
+    var win = document.getElementById('dify-chatbot-bubble-window');
+    if (!win) return;
+    var els = win.querySelectorAll('a, div, span, footer, p');
+    for (var i = 0; i < els.length; i++) {
+      if (els[i].textContent.indexOf('Powered by') !== -1 || els[i].textContent.indexOf('Dify') !== -1) {
+        els[i].style.display = 'none';
+      }
+    }
+  }
+
+  function syncWindow() {
+    var win = document.getElementById('dify-chatbot-bubble-window');
+    if (win) { applyOffset(win); hideBranding(); return true; }
+    return false;
+  }
+
+  function initDragger() {
+    bubble = document.getElementById('dify-chatbot-bubble-button');
+    if (!bubble) { setTimeout(initDragger, 500); return; }
+    bubble.style.setProperty('cursor', 'grab', 'important');
+
+    try {
+      var saved = JSON.parse(localStorage.getItem(KEY));
+      if (saved) {
+        offsetX = saved.x || 0;
+        offsetY = saved.y || 0;
+        applyOffset(bubble);
+      }
+    } catch(e) {}
+
+    bubble.addEventListener('mousedown', onDown);
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
+    bubble.addEventListener('click', onClick, {capture: true});
+    bubble.addEventListener('touchstart', onTouchStart, {passive: false});
+    document.addEventListener('touchmove', onTouchMove, {passive: false});
+    document.addEventListener('touchend', onTouchEnd);
+  }
+
+  function onDown(e) {
+    moved = false;
+    startX = e.clientX;
+    startY = e.clientY;
+  }
+
+  function onMove(e) {
+    if (startX === null) return;
+    var dx = e.clientX - startX;
+    var dy = e.clientY - startY;
+    if (Math.abs(dx) > 3 || Math.abs(dy) > 3) moved = true;
+    bubble.style.transform = 'translate(' + (offsetX + dx) + 'px, ' + (offsetY + dy) + 'px)';
+    // Also move window in real-time if open
+    syncWindow();
+  }
+
+  function onUp(e) {
+    if (startX === null) return;
+    var dx = e.clientX - startX;
+    var dy = e.clientY - startY;
+    offsetX += dx;
+    offsetY += dy;
+    startX = null;
+    startY = null;
+    try { localStorage.setItem(KEY, JSON.stringify({x: offsetX, y: offsetY})); } catch(e) {}
+  }
+
+  function onClick(e) {
+    if (moved) {
+      e.stopPropagation();
+      e.preventDefault();
+      moved = false;
+    } else {
+      // Let Dify handle toggle, then sync window position
+      setTimeout(syncWindow, 50);
+    }
+  }
+
+  function onTouchStart(e) {
+    moved = false;
+    var t = e.touches[0];
+    startX = t.clientX;
+    startY = t.clientY;
+    // Poll for window in case it opens on this touch
+    if (winPollTimer) clearInterval(winPollTimer);
+    winPollTimer = setInterval(function() {
+      if (syncWindow()) clearInterval(winPollTimer);
+    }, 100);
+  }
+
+  function onTouchMove(e) {
+    if (startX === null) return;
+    var t = e.touches[0];
+    var dx = t.clientX - startX;
+    var dy = t.clientY - startY;
+    if (Math.abs(dx) > 3 || Math.abs(dy) > 3) moved = true;
+    bubble.style.transform = 'translate(' + (offsetX + dx) + 'px, ' + (offsetY + dy) + 'px)';
+    syncWindow();
+  }
+
+  function onTouchEnd() {
+    if (startX === null) return;
+    var tr = bubble.style.transform;
+    var match = tr.match(/translate\(([^,]+),\s*([^)]+)\)/);
+    if (match) {
+      offsetX = parseFloat(match[1]);
+      offsetY = parseFloat(match[2]);
+      try { localStorage.setItem(KEY, JSON.stringify({x: offsetX, y: offsetY})); } catch(e) {}
+    }
+    startX = null;
+    startY = null;
+    if (moved) {
+      setTimeout(function() { moved = false; }, 100);
+    } else {
+      setTimeout(syncWindow, 100);
+    }
+  }
+
+  if (document.readyState === 'complete') initDragger();
+  else window.addEventListener('load', initDragger);
+})();
 </script>
 {% block extra_scripts %}{% endblock %}
 </body>

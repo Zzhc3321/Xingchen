@@ -30,8 +30,31 @@ def events_view(request):
     tag_id = request.GET.get('tag', '')
     if tag_id:
         qs = qs.filter(tags__id=tag_id)
+    priority = request.GET.get('priority', '')
+    if priority:
+        qs = qs.filter(priority=priority)
+    status_filter = request.GET.get('status', '')
+    if status_filter == 'active':
+        qs = qs.exclude(status='archived')
+    elif status_filter == 'archived':
+        qs = qs.filter(status='archived')
+
+    # Pagination
+    page = int(request.GET.get('page', 1))
+    page_size = int(request.GET.get('page_size', 15))
+    page = max(1, page)
+    page_size = min(50, max(1, page_size))
+
+    total = qs.count()
+    total_pages = max(1, (total + page_size - 1) // page_size)
+    page = min(page, total_pages) if total > 0 else 1
+
+    start = (page - 1) * page_size
+    end = start + page_size
+    items = qs[start:end]
+
     data = []
-    for e in qs:
+    for e in items:
         group = getattr(e, 'group', None)
         data.append({
             'id': e.id, 'title': e.title, 'description': e.description,
@@ -55,7 +78,18 @@ def events_view(request):
     counts = {cat: 0 for cat, _ in Event.CATEGORY_CHOICES}
     for row in cat_counts:
         counts[row['category']] = row['count']
-    return JsonResponse({'events': data, 'counts': counts})
+    return JsonResponse({
+        'events': data,
+        'counts': counts,
+        'pagination': {
+            'page': page,
+            'page_size': page_size,
+            'total': total,
+            'total_pages': total_pages,
+            'has_prev': page > 1,
+            'has_next': page < total_pages,
+        },
+    })
 
 
 @login_required
@@ -292,4 +326,59 @@ def memo_dates_view(request):
     return JsonResponse({
         'memo_dates': [d.isoformat() for d in memo_dates],
         'task_dates': [d.isoformat() for d in task_dates],
+    })
+
+
+@csrf_exempt
+@require_http_methods(['POST'])
+def external_create_event_view(request):
+    """External API: create an event using X-API-Key authentication.
+    Allows external systems (scripts, integrations) to create events."""
+    from django.conf import settings
+
+    api_key = request.META.get('HTTP_X_API_KEY', '')
+    expected_key = getattr(settings, 'EXTERNAL_API_KEY', '')
+    if not api_key or api_key != expected_key:
+        return JsonResponse({'detail': '无效的 API Key'}, status=401)
+
+    data = _json(request)
+    title = (data.get('title') or '').strip()
+    if not title:
+        return JsonResponse({'detail': '事件标题不能为空'}, status=400)
+
+    from django.utils.dateparse import parse_date
+
+    # Create event without requiring a specific user — use first active user or a designated robot
+    from myapp.members.models import User
+    creator = User.objects.filter(is_active=True).order_by('id').first()
+    if not creator:
+        return JsonResponse({'detail': '系统中没有可用用户'}, status=500)
+
+    amount_str = data.get('amount') or ''
+    event = Event.objects.create(
+        title=title,
+        description=(data.get('description') or '').strip(),
+        category=data.get('category', 'custom'),
+        priority=data.get('priority', 'medium'),
+        start_date=parse_date(data.get('start_date', '')) if data.get('start_date') else None,
+        end_date=parse_date(data.get('end_date', '')) if data.get('end_date') else None,
+        contact_person=(data.get('contact_person') or '').strip(),
+        contact_phone=(data.get('contact_phone') or '').strip(),
+        amount=float(amount_str) if amount_str else None,
+        created_by=creator,
+    )
+    event.participants.add(creator)
+
+    # If external_source is provided, save it somewhere accessible
+    external_source = data.get('external_source', '')
+    if external_source:
+        from myapp.members.models import Tag
+        tag, _ = Tag.objects.get_or_create(name=f'来源:{external_source}')
+        event.tags.add(tag)
+
+    return JsonResponse({
+        'id': event.id,
+        'title': event.title,
+        'external_source': external_source,
+        'detail': '事件创建成功',
     })

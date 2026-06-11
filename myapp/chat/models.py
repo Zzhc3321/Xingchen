@@ -66,3 +66,16 @@ class ConversationMember(models.Model):
         unique_together = ('conversation', 'user')
         verbose_name = '会话成员'
         verbose_name_plural = '会话成员'
+
+
+class ChatSummary(models.Model):
+    SUMMARY_TYPES = [('archive', '归档总结')]
+    conversation = models.ForeignKey(Conversation, on_delete=models.CASCADE, related_name='summaries', verbose_name='关联会话')
+    summary_type = models.CharField(max_length=32, choices=SUMMARY_TYPES, default='archive', verbose_name='总结类型')
+    content = models.TextField(verbose_name='总结内容')
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name='创建时间')
+
+    class Meta:
+        ordering = ['-created_at']
+        verbose_name = '聊天总结'
+        verbose_name_plural = '聊天总结'

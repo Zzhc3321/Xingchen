@@ -95,6 +95,15 @@ REST_FRAMEWORK = {
     'DEFAULT_PERMISSION_CLASSES': ['rest_framework.permissions.IsAuthenticated'],
 }
 
-# AI Robot — Dify Workflow API
+# AI Robot — Dify Workflow API (星辰AI助手，群聊回复)
 AI_ROBOT_API_URL = os.environ.get('AI_ROBOT_API_URL', 'http://81.70.230.110:8088/v1/workflows/run')
 AI_ROBOT_API_KEY = os.environ.get('AI_ROBOT_API_KEY', 'app-MmyRsdQxDXpTzBKRORvb9akd')
+
+# 生成报告专用 API (app-gOpM9ADb6GdeJRhIA9zJmqb7, input_text → text)
+REPORT_API_KEY = os.environ.get('REPORT_API_KEY', 'app-gOpM9ADb6GdeJRhIA9zJmqb7')
+
+# 群聊编报专用 API (app-Gyqotj43SHI3xR5wihDYwCU7, input_text → text)
+GROUP_REPORT_API_KEY = os.environ.get('GROUP_REPORT_API_KEY', 'app-Gyqotj43SHI3xR5wihDYwCU7')
+
+# External API Key for event creation from external systems
+EXTERNAL_API_KEY = os.environ.get('EXTERNAL_API_KEY', 'default-key-change-me')

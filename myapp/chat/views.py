@@ -361,6 +361,70 @@ def archive_conversation_view(request, conversation_id):
     archived = data.get('archived', True)
     conv.archived = archived
     conv.save(update_fields=['archived'])
+
+    # Auto-generate summary for group chats when archiving
+    if archived and conv.conversation_type == 'group':
+        import threading
+        from django.db import close_old_connections
+
+        # Capture user info before thread starts
+        archiver_name = (request.user.display_name or request.user.username)
+
+        def generate_summary():
+            close_old_connections()
+            try:
+                # Fetch all messages from this conversation
+                from myapp.chat.models import Message as Msg
+                from myapp.ai_robot import call_group_report_api_sync
+                from myapp.models import SavedReport
+                from myapp.notify import notify_group_archived_summary
+
+                messages = Msg.objects.filter(
+                    conversation=conv,
+                ).exclude(content='').select_related('sender').order_by('created_at')
+
+                if not messages:
+                    return
+
+                # Format conversation history
+                history_lines = []
+                for m in messages:
+                    name = m.sender.display_name or m.sender.username
+                    history_lines.append(f"{name}: {m.content}")
+
+                history_text = '\n'.join(history_lines)
+                group_name = conv.title or '未命名群聊'
+
+                # Pass actual chat records as input_text with personal info
+                MAX_INPUT = 650000
+                header = f"群聊：{group_name}\n归档人：{archiver_name}\n---\n"
+                if len(history_text) > MAX_INPUT:
+                    history_text = header + history_text[-MAX_INPUT + len(header):]
+                else:
+                    history_text = header + history_text
+                reply = call_group_report_api_sync(history_text)
+
+                if reply:
+                    # Save the summary to ALL participants
+                    preview = reply[:100]
+                    for participant in conv.participants.all():
+                        SavedReport.objects.create(
+                            user=participant,
+                            title=f'群聊总结：{group_name}',
+                            report_type='archive_summary',
+                            content=reply,
+                            source='group_archive',
+                            related_conv_id=conv.id,
+                        )
+                        notify_group_archived_summary(
+                            participant.id, conv.id, group_name, preview
+                        )
+            except Exception as e:
+                import logging
+                logging.getLogger('chat.archive').error(f'Failed to generate group summary: {e}')
+
+        threading.Thread(target=generate_summary, daemon=True).start()
+
     return JsonResponse({'detail': 'ok'})
 
 

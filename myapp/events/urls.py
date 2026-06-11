@@ -3,6 +3,7 @@ from .views import (
     events_view, create_event_view, event_detail_view, create_event_group_view,
     archive_event_view, restore_event_view, tag_list_view, event_tags_view,
     memo_list_view, memo_create_view, memo_delete_view, memo_dates_view,
+    external_create_event_view,
 )
 
 urlpatterns = [
@@ -18,4 +19,5 @@ urlpatterns = [
     path('memos/create/', memo_create_view),
     path('memos/<int:memo_id>/delete/', memo_delete_view),
     path('memos/dates/', memo_dates_view),
+    path('events/external/create/', external_create_event_view),
 ]

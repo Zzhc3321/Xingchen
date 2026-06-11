@@ -248,6 +248,178 @@ async def call_ai_api_async(input_text, history_text, input_file=None):
         return f"抱歉，星辰AI助手暂时无法回复（错误：{str(e)[:80]}）"
 
 
+async def call_report_api_async(input_text, history_text=None):
+    """Call the report generation Dify Workflow API (app-gOpM9ADb6GdeJRhIA9zJmqb7).
+    Input: input_text (str), returns text output.
+    """
+    import httpx
+    from django.conf import settings
+
+    headers = {
+        "Authorization": f"Bearer {settings.REPORT_API_KEY}",
+        "Content-Type": "application/json",
+    }
+
+    inputs = {"input_text": input_text}
+    if history_text:
+        inputs["text"] = history_text
+
+    payload = {
+        "inputs": inputs,
+        "response_mode": "blocking",
+        "user": "ai_robot",
+    }
+
+    try:
+        async with httpx.AsyncClient(timeout=120.0) as client:
+            resp = await client.post(settings.AI_ROBOT_API_URL, json=payload, headers=headers)
+            if not resp.is_success:
+                logger.error(f"Report API returned {resp.status_code}: {resp.text[:500]}")
+            resp.raise_for_status()
+            data = resp.json()
+            outputs = data.get('data', {}).get('outputs', {})
+            if isinstance(outputs, dict):
+                return outputs.get('text') or outputs.get('response') or json.dumps(outputs, ensure_ascii=False)
+            if isinstance(outputs, str):
+                return outputs
+            return json.dumps(data, ensure_ascii=False)
+    except httpx.HTTPStatusError as e:
+        body = e.response.text[:500] if hasattr(e, 'response') else ''
+        logger.error(f"Report API HTTP error: {e} — body: {body}")
+        return f"报告生成失败（API请求错误）"
+    except Exception as e:
+        logger.error(f"Report API call failed: {e}")
+        return f"报告生成失败（{str(e)[:80]}）"
+
+
+def call_report_api_sync(input_text, history_text=None):
+    """Sync version — call the report generation Dify Workflow API."""
+    import httpx
+    from django.conf import settings
+
+    headers = {
+        "Authorization": f"Bearer {settings.REPORT_API_KEY}",
+        "Content-Type": "application/json",
+    }
+
+    inputs = {"input_text": input_text}
+    if history_text:
+        inputs["text"] = history_text
+
+    payload = {
+        "inputs": inputs,
+        "response_mode": "blocking",
+        "user": "ai_robot",
+    }
+
+    try:
+        with httpx.Client(timeout=120.0) as client:
+            resp = client.post(settings.AI_ROBOT_API_URL, json=payload, headers=headers)
+            if not resp.is_success:
+                logger.error(f"Report API returned {resp.status_code}: {resp.text[:500]}")
+            resp.raise_for_status()
+            data = resp.json()
+            outputs = data.get('data', {}).get('outputs', {})
+            if isinstance(outputs, dict):
+                return outputs.get('text') or outputs.get('response') or json.dumps(outputs, ensure_ascii=False)
+            if isinstance(outputs, str):
+                return outputs
+            return json.dumps(data, ensure_ascii=False)
+    except httpx.HTTPStatusError as e:
+        body = e.response.text[:500] if hasattr(e, 'response') else ''
+        logger.error(f"Report API HTTP error: {e} — body: {body}")
+        return f"报告生成失败（API请求错误）"
+    except Exception as e:
+        logger.error(f"Report API call failed: {e}")
+        return f"报告生成失败（{str(e)[:80]}）"
+
+
+async def call_group_report_api_async(input_text, history_text=None):
+    """Call the group chat report Dify Workflow API (app-Gyqotj43SHI3xR5wihDYwCU7).
+    Input: input_text (str), returns text output.
+    """
+    import httpx
+    from django.conf import settings
+
+    headers = {
+        "Authorization": f"Bearer {settings.GROUP_REPORT_API_KEY}",
+        "Content-Type": "application/json",
+    }
+
+    inputs = {"input_text": input_text}
+    if history_text:
+        inputs["text"] = history_text
+
+    payload = {
+        "inputs": inputs,
+        "response_mode": "blocking",
+        "user": "ai_robot",
+    }
+
+    try:
+        async with httpx.AsyncClient(timeout=120.0) as client:
+            resp = await client.post(settings.AI_ROBOT_API_URL, json=payload, headers=headers)
+            if not resp.is_success:
+                logger.error(f"Group report API returned {resp.status_code}: {resp.text[:500]}")
+            resp.raise_for_status()
+            data = resp.json()
+            outputs = data.get('data', {}).get('outputs', {})
+            if isinstance(outputs, dict):
+                return outputs.get('text') or outputs.get('response') or json.dumps(outputs, ensure_ascii=False)
+            if isinstance(outputs, str):
+                return outputs
+            return json.dumps(data, ensure_ascii=False)
+    except httpx.HTTPStatusError as e:
+        body = e.response.text[:500] if hasattr(e, 'response') else ''
+        logger.error(f"Group report API HTTP error: {e} — body: {body}")
+        return f"群聊编报失败（API请求错误）"
+    except Exception as e:
+        logger.error(f"Group report API call failed: {e}")
+        return f"群聊编报失败（{str(e)[:80]}）"
+
+
+def call_group_report_api_sync(input_text, history_text=None):
+    """Sync version — call the group chat report Dify Workflow API."""
+    import httpx
+    from django.conf import settings
+
+    headers = {
+        "Authorization": f"Bearer {settings.GROUP_REPORT_API_KEY}",
+        "Content-Type": "application/json",
+    }
+
+    inputs = {"input_text": input_text}
+    if history_text:
+        inputs["text"] = history_text
+
+    payload = {
+        "inputs": inputs,
+        "response_mode": "blocking",
+        "user": "ai_robot",
+    }
+
+    try:
+        with httpx.Client(timeout=120.0) as client:
+            resp = client.post(settings.AI_ROBOT_API_URL, json=payload, headers=headers)
+            if not resp.is_success:
+                logger.error(f"Group report API returned {resp.status_code}: {resp.text[:500]}")
+            resp.raise_for_status()
+            data = resp.json()
+            outputs = data.get('data', {}).get('outputs', {})
+            if isinstance(outputs, dict):
+                return outputs.get('text') or outputs.get('response') or json.dumps(outputs, ensure_ascii=False)
+            if isinstance(outputs, str):
+                return outputs
+            return json.dumps(data, ensure_ascii=False)
+    except httpx.HTTPStatusError as e:
+        body = e.response.text[:500] if hasattr(e, 'response') else ''
+        logger.error(f"Group report API HTTP error: {e} — body: {body}")
+        return f"群聊编报失败（API请求错误）"
+    except Exception as e:
+        logger.error(f"Group report API call failed: {e}")
+        return f"群聊编报失败（{str(e)[:80]}）"
+
+
 def call_ai_api_sync(input_text, history_text, input_file=None):
     """Call the Dify Workflow API and return the response text (sync version).
     input_file: optional HTTP URL to a file — will be uploaded to Dify first.
