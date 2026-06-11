@@ -14,7 +14,10 @@
   <div class="card" id="convPanel" style="width:260px;min-width:260px;display:flex;flex-direction:column;overflow:hidden;margin-right:12px" class="conv-panel">
     <div class="card-header px-3 py-2 d-flex align-items-center justify-content-between">
       <span class="fw-bold" style="font-size:.88rem"><i class="bi bi-chat-dots me-2" style="color:var(--brand)"></i>会话列表</span>
-      <span class="muted small" id="convCount">0</span>
+      <div class="d-flex align-items-center gap-1">
+        <button class="btn btn-sm btn-outline-primary" id="createGroupBtn" style="border-radius:999px;padding:2px 10px;font-size:.75rem" title="创建群聊"><i class="bi bi-plus-lg"></i> 群聊</button>
+        <span class="muted small" id="convCount">0</span>
+      </div>
     </div>
     <div class="content-scroll p-1" id="convList" style="flex:1"></div>
     <!-- Unread summary bar -->
@@ -122,6 +125,38 @@
     </div>
   </div>
 </div>
+
+<!-- Create Group Modal -->
+<div class="modal fade" id="createGroupModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content" style="border-radius:12px;border:none">
+      <div class="modal-header border-0 pb-0">
+        <h5 class="fw-bold"><i class="bi bi-people me-2" style="color:var(--brand)"></i>创建群聊</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div class="mb-3">
+          <label class="form-label small fw-medium">群名称</label>
+          <input class="form-control" id="groupNameInput" placeholder="输入群聊名称" style="border-radius:10px">
+        </div>
+        <div class="mb-2">
+          <label class="form-label small fw-medium">添加成员</label>
+          <div class="input-group" style="border-radius:10px;overflow:hidden">
+            <input class="form-control" id="groupMemberSearch" placeholder="搜索用户添加" style="border:none;padding:8px 12px">
+            <button class="btn btn-outline-primary" id="groupMemberSearchBtn"><i class="bi bi-search"></i></button>
+          </div>
+        </div>
+        <div id="groupMemberSearchResults" class="mb-2" style="max-height:200px;overflow-y:auto"></div>
+        <div id="selectedGroupMembers" class="d-flex flex-wrap gap-1"></div>
+      </div>
+      <div class="modal-footer border-0 pt-0">
+        <button class="btn btn-secondary" data-bs-dismiss="modal" style="border-radius:999px">取消</button>
+        <button class="btn btn-primary" id="confirmCreateGroupBtn" style="border-radius:999px"><i class="bi bi-check-lg me-1"></i>创建群聊</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 {% endblock %}
 
 {% block extra_scripts %}
@@ -922,41 +957,17 @@ let notifPollTimer = null;
 
 async function pollNotifications(){
   try {
-    const r = await fetch('/api/friends/', {credentials:'include'});
+    const r = await fetch('/api/notifications/', {credentials:'include'});
     const data = await r.json();
-    const pendingCount = (data.pending_requests || []).length;
+    const unreadCount = data.unread_count || 0;
     const badge = document.getElementById('notifBadge');
     const notifDot = document.getElementById('notifCountLabel');
-
-    // Update friend request badge + notification list
-    if(pendingCount > 0){
-      notifDot.textContent = pendingCount;
-      showFriendRequestNotifs(data.pending_requests);
+    notifDot.textContent = unreadCount;
+    if(unreadCount > 0){
+      badge.textContent = unreadCount > 99 ? '99+' : unreadCount;
+      badge.style.display = 'inline-block';
     } else {
-      notifDot.textContent = '0';
-      const notifList = document.getElementById('notifList');
-      if(!notifList.querySelector('.notif-item')){
-        notifList.innerHTML = '<div class="empty-state small py-3"><i class="bi bi-bell-slash" style="font-size:1.5rem"></i><p class="mt-1">暂无通知</p></div>';
-      }
-    }
-
-    // Add friend requests to notification dropdown
-    function showFriendRequestNotifs(requests){
-      const notifList = document.getElementById('notifList');
-      let html = '';
-      requests.forEach(r => {
-        html += `
-          <div class="notif-item">
-            <span class="notif-dot"></span>
-            <div style="flex:1;min-width:0">
-              <div class="fw-medium" style="font-size:.82rem">好友申请</div>
-              <div class="muted" style="font-size:.75rem">${r.display_name || r.sender} 请求添加好友</div>
-            </div>
-            <a href="/friends/" class="btn btn-sm btn-outline-primary" style="border-radius:999px;font-size:.72rem;padding:2px 10px">处理</a>
-          </div>
-        `;
-      });
-      if(html) notifList.innerHTML = html;
+      badge.style.display = 'none';
     }
   } catch(e){ /* silent */ }
 }
@@ -966,6 +977,113 @@ document.getElementById('showArchivedConvsBtn').addEventListener('click', () => 
   showArchivedConvs = !showArchivedConvs;
   document.getElementById('archivedConvLabel').textContent = showArchivedConvs ? '活跃会话' : '归档会话';
   loadConversations();
+});
+
+// ===== Create Group =====
+let selectedGroupMembers = new Set();
+let selectedGroupMembersData = [];
+
+document.getElementById('createGroupBtn').addEventListener('click', () => {
+  // Reset state
+  selectedGroupMembers = new Set();
+  selectedGroupMembersData = [];
+  document.getElementById('groupNameInput').value = '';
+  document.getElementById('groupMemberSearchResults').innerHTML = '';
+  document.getElementById('selectedGroupMembers').innerHTML = '';
+  new bootstrap.Modal(document.getElementById('createGroupModal')).show();
+});
+
+document.getElementById('groupMemberSearchBtn').addEventListener('click', async () => {
+  const q = document.getElementById('groupMemberSearch').value.trim();
+  if(!q || q.length < 1) return;
+  const r = await fetch(`/api/users/search/?q=${encodeURIComponent(q)}`, {credentials:'include'});
+  const data = await r.json();
+  const results = (data.users || []).filter(u => !selectedGroupMembers.has(u.id));
+  const container = document.getElementById('groupMemberSearchResults');
+  if(!results.length){
+    container.innerHTML = '<div class="muted small text-center py-2">未找到用户</div>';
+    return;
+  }
+  container.innerHTML = results.map(u => `
+    <div class="d-flex align-items-center justify-content-between p-2 border-bottom">
+      <div class="d-flex align-items-center gap-2">
+        <img src="${u.avatar_url || '/static/avater.jpeg'}" class="avatar-sm" onerror="this.src='/static/avater.jpeg'">
+        <span class="fw-medium" style="font-size:.85rem">${u.display_name || u.username}</span>
+        <span class="muted small">${u.organization || ''}</span>
+      </div>
+      <button class="btn btn-sm btn-outline-primary add-group-member-btn" data-id="${u.id}" data-name="${u.display_name || u.username}" data-avatar="${u.avatar_url || ''}" style="border-radius:999px;font-size:.75rem"><i class="bi bi-plus"></i></button>
+    </div>
+  `).join('');
+
+  container.querySelectorAll('.add-group-member-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const id = parseInt(btn.dataset.id);
+      if(selectedGroupMembers.has(id)) return;
+      selectedGroupMembers.add(id);
+      selectedGroupMembersData.push({id, name: btn.dataset.name, avatar: btn.dataset.avatar});
+      btn.disabled = true;
+      btn.innerHTML = '<i class="bi bi-check-lg"></i>';
+      btn.className = 'btn btn-sm btn-outline-secondary';
+      renderSelectedGroupMembers();
+    });
+  });
+});
+
+document.getElementById('groupMemberSearch').addEventListener('keydown', e => {
+  if(e.key === 'Enter') document.getElementById('groupMemberSearchBtn').click();
+});
+
+function renderSelectedGroupMembers(){
+  const container = document.getElementById('selectedGroupMembers');
+  container.innerHTML = selectedGroupMembersData.map((u, idx) => `
+    <span class="d-inline-flex align-items-center gap-1 px-2 py-1 rounded-pill" style="background:var(--brand-soft);font-size:.78rem">
+      <img src="${u.avatar || '/static/avater.jpeg'}" class="rounded-circle" style="width:18px;height:18px;object-fit:cover" onerror="this.src='/static/avater.jpeg'">
+      ${u.name}
+      <button class="btn btn-sm p-0 remove-selected-member-btn" data-idx="${idx}" style="color:var(--muted);line-height:1;background:none;border:none"><i class="bi bi-x"></i></button>
+    </span>
+  `).join('') || '<span class="muted small">未选择成员</span>';
+
+  container.querySelectorAll('.remove-selected-member-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const idx = parseInt(btn.dataset.idx);
+      const u = selectedGroupMembersData[idx];
+      if(u) {
+        selectedGroupMembers.delete(u.id);
+        selectedGroupMembersData.splice(idx, 1);
+        renderSelectedGroupMembers();
+        // Re-enable the add button in search results if visible
+        const addBtns = document.querySelectorAll('.add-group-member-btn');
+        addBtns.forEach(b => {
+          if(parseInt(b.dataset.id) === u.id) {
+            b.disabled = false;
+            b.innerHTML = '<i class="bi bi-plus"></i>';
+            b.className = 'btn btn-sm btn-outline-primary add-group-member-btn';
+          }
+        });
+      }
+    });
+  });
+}
+
+document.getElementById('confirmCreateGroupBtn').addEventListener('click', async () => {
+  const title = document.getElementById('groupNameInput').value.trim();
+  if(!title) { showToast('请输入群名称', 'warning'); return; }
+  if(!selectedGroupMembersData.length) { showToast('请至少选择一名成员', 'warning'); return; }
+  const participantIds = selectedGroupMembersData.map(u => u.id);
+  try {
+    const r = await fetch('/api/conversations/create/', {
+      method:'POST', headers:{'Content-Type':'application/json'}, credentials:'include',
+      body: JSON.stringify({type:'group', title, participant_ids: participantIds})
+    });
+    const data = await r.json();
+    if(!r.ok) { showToast(data.detail || '创建失败', 'danger'); return; }
+    showToast('群聊已创建', 'success');
+    bootstrap.Modal.getInstance(document.getElementById('createGroupModal')).hide();
+    await loadConversations();
+    // Open the new conversation
+    const conv = conversations.find(c => c.id === data.id);
+    if(conv) openConversation(conv);
+  } catch(e){ showToast('创建失败', 'danger'); }
 });
 
 // ===== Init =====

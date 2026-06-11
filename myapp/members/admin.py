@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
-from .models import Organization, User, FriendRequest, Friendship, Notification
+from .models import Organization, User, Notification, FriendRequest
 
 
 @admin.register(Organization)
@@ -24,24 +24,17 @@ class UserAdmin(BaseUserAdmin):
     )
 
 
-@admin.register(FriendRequest)
-class FriendRequestAdmin(admin.ModelAdmin):
-    list_display = ['id', 'sender', 'receiver', 'status', 'created_at']
-    list_filter = ['status', 'created_at']
-    search_fields = ['sender__username', 'receiver__username', 'sender__display_name', 'receiver__display_name']
-    raw_id_fields = ['sender', 'receiver']
-
-
-@admin.register(Friendship)
-class FriendshipAdmin(admin.ModelAdmin):
-    list_display = ['id', 'user', 'friend', 'created_at']
-    search_fields = ['user__username', 'friend__username', 'user__display_name', 'friend__display_name']
-    raw_id_fields = ['user', 'friend']
-
-
 @admin.register(Notification)
 class NotificationAdmin(admin.ModelAdmin):
     list_display = ['id', 'user', 'notif_type', 'title', 'is_read', 'created_at']
     list_filter = ['notif_type', 'is_read', 'created_at']
     search_fields = ['title', 'message', 'user__username']
     raw_id_fields = ['user']
+
+
+@admin.register(FriendRequest)
+class FriendRequestAdmin(admin.ModelAdmin):
+    list_display = ['id', 'sender', 'receiver', 'status', 'created_at']
+    list_filter = ['status', 'created_at']
+    search_fields = ['sender__username', 'receiver__username']
+    raw_id_fields = ['sender', 'receiver']

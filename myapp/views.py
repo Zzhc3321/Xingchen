@@ -24,16 +24,6 @@ def friends_page(request):
     return _render(request, 'friends.html', 'friends')
 
 
-@login_required
-def profile_page(request):
-    return _render(request, 'profile.html', 'profile')
-
-
-@login_required
-def events_page(request):
-    return _render(request, 'events.html', 'events')
-
-
 def login_page(request):
     return render(request, 'login.html')
 

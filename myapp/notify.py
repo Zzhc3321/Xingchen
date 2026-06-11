@@ -46,7 +46,8 @@ def save_and_notify(user_id, notif_type, title, message, related_id=None, action
     return notif
 
 
-def notify_friend_request(receiver_id, request_id, sender_username, sender_name, sender_avatar, message=''):
+def notify_friend_request(receiver_id, request_id, sender_username, sender_name, sender_avatar):
+    """Notify a user about an incoming friend request."""
     save_and_notify(
         receiver_id,
         'friend_request',
@@ -58,6 +59,7 @@ def notify_friend_request(receiver_id, request_id, sender_username, sender_name,
 
 
 def notify_friend_accepted(sender_id, accepter_name):
+    """Notify a user that their friend request was accepted."""
     save_and_notify(
         sender_id,
         'friend_accepted',
@@ -80,18 +82,6 @@ def notify_new_message(user_id, conversation_id, conversation_title, sender_name
     )
 
 
-def notify_group_created(user_id, group_id, group_title, creator_name, event_title):
-    """Notify a user that a group was created from an event."""
-    save_and_notify(
-        user_id,
-        'group_created',
-        '建群通知',
-        f'{creator_name} 为事件「{event_title}」创建了群聊「{group_title}」',
-        related_id=group_id,
-        action_url=f'/chat/?conv={group_id}',
-    )
-
-
 def notify_group_invite(user_id, group_id, group_title, inviter_name):
     """Notify a user that they were added to a group."""
     save_and_notify(
@@ -104,13 +94,3 @@ def notify_group_invite(user_id, group_id, group_title, inviter_name):
     )
 
 
-def notify_task_assigned(user_id, task_id, task_title, assigner_name):
-    """Notify a user that a task has been assigned to them."""
-    save_and_notify(
-        user_id,
-        'task_assigned',
-        '新任务派单',
-        f'{assigner_name} 给你派发了任务「{task_title}」',
-        related_id=task_id,
-        action_url=f'/dashboard/?task={task_id}',
-    )

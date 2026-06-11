@@ -1,7 +1,7 @@
 from django.core.management.base import BaseCommand
-from myapp.members.models import User, Friendship
+from myapp.members.models import User
 from myapp.chat.models import Conversation, Message
-from myapp.ai_robot import get_robot_user, ROBOT_DISPLAY_NAME
+from myapp.ai_robot import get_robot_user
 
 
 class Command(BaseCommand):
@@ -16,11 +16,9 @@ class Command(BaseCommand):
         if not bob.has_usable_password():
             bob.set_password('12345678')
             bob.save()
-        Friendship.objects.get_or_create(user=alice, friend=bob)
-        Friendship.objects.get_or_create(user=bob, friend=alice)
         conv, _ = Conversation.objects.get_or_create(conversation_type='direct', created_by=alice, title='')
         conv.participants.set([alice, bob])
-        Message.objects.get_or_create(conversation=conv, sender=alice, content='你好，欢迎使用 MyWeb Chat')
+        Message.objects.get_or_create(conversation=conv, sender=alice, content='你好，欢迎使用星辰协同平台')
         # Ensure AI robot user exists
         robot = get_robot_user()
         if robot:

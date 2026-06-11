@@ -5,7 +5,7 @@ from channels.generic.websocket import AsyncWebsocketConsumer
 
 class NotificationConsumer(AsyncWebsocketConsumer):
     """Global notification WebSocket — one connection per user, receives
-    real-time pushes for friend requests, friend accepted, new messages, etc."""
+    real-time pushes for new messages, group invites, system notifications, etc."""
 
     async def connect(self):
         self.user = self.scope['user']
@@ -54,6 +54,7 @@ class NotificationConsumer(AsyncWebsocketConsumer):
             'title': event.get('title', '好友申请'),
             'message': event.get('message', ''),
             'notif_type': 'friend_request',
+            'related_id': event.get('related_id'),
             'action_url': event.get('action_url', '/friends/'),
             'created_at': event.get('created_at', ''),
         })
@@ -102,17 +103,6 @@ class NotificationConsumer(AsyncWebsocketConsumer):
             'created_at': event.get('created_at', ''),
         })
 
-    async def notif_task_assigned(self, event):
-        await self._send({
-            'type': 'task_assigned',
-            'title': event.get('title', '新任务派单'),
-            'message': event.get('message', ''),
-            'notif_type': 'task_assigned',
-            'related_id': event.get('related_id'),
-            'action_url': event.get('action_url', ''),
-            'created_at': event.get('created_at', ''),
-        })
-
     async def notif_system(self, event):
         await self._send({
             'type': 'system',
@@ -127,5 +117,4 @@ class NotificationConsumer(AsyncWebsocketConsumer):
         await self._send({
             'type': 'unread_update',
             'unread_count': event.get('unread_count', 0),
-            'friend_request_count': event.get('friend_request_count', 0),
         })

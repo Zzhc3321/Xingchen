@@ -1,20 +1,18 @@
 {% extends 'base.html' %}
 {% load static %}
-{% block title %}门户工作台 - 星辰协同平台{% endblock %}
-{% block page_title %}门户工作台{% endblock %}
+{% block title %}工作台 - 星辰协同平台{% endblock %}
+{% block page_title %}工作台{% endblock %}
 
 {% block extra_head %}
 <style>
-/* ===== Dashboard Grid Layout ===== */
+/* ===== Dashboard Layout ===== */
 .dashboard-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
   gap: 16px;
   padding-bottom: 24px;
 }
-.dashboard-grid .grid-item { min-height: 100px; }
 .dashboard-grid .grid-item--full { grid-column: 1 / -1; }
-.dashboard-grid .grid-item--wide { grid-column: span 2; }
 
 /* ===== Widget Card ===== */
 .dash-widget {
@@ -22,41 +20,24 @@
   border: 1px solid var(--line);
   border-radius: 14px;
   box-shadow: var(--shadow-sm);
-  transition: box-shadow .25s, transform .2s;
+  transition: box-shadow .25s;
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  position: relative;
 }
 .dash-widget:hover { box-shadow: var(--shadow-md); }
-.dash-widget.is-dragging { opacity: .5; transform: scale(.97); }
-.dash-widget.drag-over { border-color: var(--brand); box-shadow: 0 0 0 2px var(--brand-soft); }
-
-/* ===== Widget Header ===== */
 .dash-widget-header {
   padding: 14px 18px;
   display: flex;
   align-items: center;
   justify-content: space-between;
   border-bottom: 1px solid var(--line);
-  cursor: grab;
-  user-select: none;
-  transition: background .15s;
 }
-.dash-widget-header:active { cursor: grabbing; }
-.dash-widget-header:hover { background: var(--soft); }
 .dash-widget-title { font-weight: 600; font-size: .88rem; display: flex; align-items: center; gap: 8px; }
-.dash-widget-actions { display: flex; gap: 2px; }
-.dash-widget-actions button {
-  border: none; background: transparent; padding: 4px 6px; border-radius: 6px;
-  color: var(--muted); font-size: .78rem; cursor: pointer; transition: .15s;
-}
-.dash-widget-actions button:hover { background: var(--line); color: var(--ink); }
 .dash-widget-body { padding: 14px 18px; flex: 1; overflow-y: auto; max-height: 340px; }
-.dash-widget-body.collapsed { max-height: 0; padding: 0 18px; overflow: hidden; }
 
 /* ===== Stats Cards ===== */
-.stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 20px; }
+.stats-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 20px; }
 .stat-card {
   padding: 16px 18px; border-radius: 14px; border: 1px solid var(--line);
   background: #fff; transition: all .25s; position: relative; overflow: hidden;
@@ -68,7 +49,6 @@
 }
 .stat-card .stat-value { font-size: 1.5rem; font-weight: 700; line-height: 1.2; }
 .stat-card .stat-label { font-size: .78rem; color: var(--muted); margin-top: 2px; }
-.stat-card .stat-detail { font-size: .7rem; color: var(--muted); margin-top: 6px; padding-top: 6px; border-top: 1px solid #f1f5f9; }
 
 /* ===== Welcome Banner ===== */
 .welcome-banner {
@@ -79,7 +59,6 @@
 .welcome-banner h4 { font-weight: 700; margin: 0; font-size: 1.2rem; }
 .welcome-banner p { margin: 2px 0 0; opacity: .8; font-size: .85rem; }
 .welcome-banner .btn-light { border-radius: 999px; font-weight: 500; }
-.welcome-banner .btn-light:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,0,0,.15); }
 
 /* ===== Quick Links ===== */
 .quick-links-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
@@ -92,53 +71,12 @@
 .quick-link i { font-size: 1.2rem; }
 .quick-link span { font-size: .78rem; font-weight: 500; }
 
-/* ===== Common ===== */
-.timeline-item { position: relative; padding: 0 0 16px 22px; border-left: 2px solid var(--line); }
-.timeline-item:last-child { padding-bottom: 0; }
-.timeline-item::before { content: ''; position: absolute; left: -5px; top: 4px; width: 8px; height: 8px; border-radius: 50%; background: var(--brand); }
-.timeline-item .time { font-size: .7rem; color: var(--muted); }
+/* ===== Feed Items ===== */
 .feed-item { padding: 10px 0; border-bottom: 1px solid #f1f5f9; display: flex; align-items: center; gap: 10px; cursor: pointer; transition: background .15s; border-radius: 8px; margin: 0 -4px; padding: 8px 4px; }
 .feed-item:hover { background: var(--soft); }
 .feed-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
-.online-avatar { width: 34px; height: 34px; border-radius: 50%; object-fit: cover; border: 2px solid #fff; box-shadow: 0 2px 6px rgba(0,0,0,.1); }
-.calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; text-align: center; font-size: .8rem; }
-.calendar-grid .day-header { font-weight: 600; color: var(--muted); padding: 5px 0; font-size: .7rem; }
-.calendar-grid .day { padding: 5px 0; border-radius: 6px; cursor: pointer; transition: .1s; }
-.calendar-grid .day:hover { background: var(--brand-soft); }
-.calendar-grid .day.today { background: var(--brand); color: #fff; font-weight: 600; }
-.layout-btn { border: none; background: transparent; padding: 4px 8px; border-radius: 6px; color: var(--muted); font-size: .78rem; cursor: pointer; transition: .15s; }
-.layout-btn:hover { background: var(--soft); color: var(--ink); }
 
-/* ===== Empty State Override ===== */
-.dash-empty { padding: 24px 12px; text-align: center; color: var(--muted); }
-.dash-empty i { font-size: 1.8rem; opacity: .35; margin-bottom: 8px; display: block; }
-.dash-empty p { font-size: .82rem; margin: 0; }
-
-/* ===== Mobile ===== */
-@media (max-width: 768px) {
-  .dashboard-grid { grid-template-columns: 1fr; gap: 12px; }
-  .dashboard-grid .grid-item--wide { grid-column: 1; }
-  .stats-row { grid-template-columns: repeat(2, 1fr); gap: 8px; }
-  .stat-card { padding: 12px 14px; }
-  .stat-card .stat-value { font-size: 1.2rem; }
-  .stat-card .stat-icon { width: 34px; height: 34px; font-size: .95rem; }
-  .welcome-banner { padding: 18px 16px; flex-direction: column; align-items: flex-start; }
-  .welcome-banner h4 { font-size: 1.05rem; }
-  .quick-links-grid { grid-template-columns: repeat(4, 1fr); gap: 6px; }
-  .quick-link { padding: 10px 6px; }
-  .quick-link i { font-size: 1rem; }
-  .quick-link span { font-size: .68rem; }
-  .dash-widget-header { padding: 10px 14px; }
-  .dash-widget-body { padding: 10px 14px; max-height: 260px; }
-  .dash-widget-body.collapsed { padding: 0 14px; }
-}
-@media (max-width: 576px) {
-  .stats-row { grid-template-columns: repeat(2, 1fr); gap: 6px; }
-  .stat-card .stat-value { font-size: 1.05rem; }
-  .quick-links-grid { grid-template-columns: repeat(2, 1fr); }
-}
-
-/* ===== Announcements Widget ===== */
+/* ===== Announcements ===== */
 .ann-item {
   padding: 10px 12px;
   border-bottom: 1px solid var(--line);
@@ -146,26 +84,24 @@
 }
 .ann-item:last-child { border-bottom: none; }
 .ann-item:hover { background: var(--soft); }
-.ann-pinned { background: rgba(215, 119, 87, 0.04); border-left: 3px solid var(--brand); }
-.ann-title {
-  font-weight: 600;
-  font-size: .85rem;
-  margin-bottom: 4px;
-  display: flex;
-  align-items: center;
-}
-.ann-content {
-  font-size: .8rem;
-  color: var(--muted);
-  line-height: 1.5;
-  white-space: pre-wrap;
-  word-break: break-word;
-}
-.ann-time {
-  font-size: .68rem;
-  color: var(--muted);
-  opacity: .7;
-  margin-top: 4px;
+.ann-pinned { background: rgba(26,115,232,0.04); border-left: 3px solid var(--brand); }
+.ann-title { font-weight: 600; font-size: .85rem; margin-bottom: 4px; display: flex; align-items: center; }
+.ann-content { font-size: .8rem; color: var(--muted); line-height: 1.5; white-space: pre-wrap; word-break: break-word; }
+.ann-time { font-size: .68rem; color: var(--muted); opacity: .7; margin-top: 4px; }
+
+/* ===== Empty State ===== */
+.dash-empty { padding: 24px 12px; text-align: center; color: var(--muted); }
+.dash-empty i { font-size: 1.8rem; opacity: .35; margin-bottom: 8px; display: block; }
+.dash-empty p { font-size: .82rem; margin: 0; }
+
+@media (max-width: 768px) {
+  .dashboard-grid { grid-template-columns: 1fr; gap: 12px; }
+  .stats-row { grid-template-columns: repeat(2, 1fr); gap: 8px; }
+  .stat-card { padding: 12px 14px; }
+  .stat-card .stat-value { font-size: 1.2rem; }
+  .stat-card .stat-icon { width: 34px; height: 34px; font-size: .95rem; }
+  .welcome-banner { padding: 18px 16px; flex-direction: column; align-items: flex-start; }
+  .quick-links-grid { grid-template-columns: repeat(2, 1fr); }
 }
 </style>
 {% endblock %}
@@ -175,9 +111,6 @@
   <div class="container-fluid">
     <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
       <div class="muted" style="font-size:.88rem">云改数转智慧</div>
-      <div style="display:flex;gap:6px">
-        <button class="layout-btn" id="resetLayoutBtn" title="重置布局"><i class="bi bi-arrow-counterclockwise"></i> 重置</button>
-      </div>
     </div>
   </div>
 </div>
@@ -192,7 +125,6 @@
       <div class="mt-1 small opacity-75" id="orgInfo"></div>
     </div>
     <div style="display:flex;gap:8px;flex-wrap:wrap">
-      <a href="/events/" class="btn btn-light px-4"><i class="bi bi-calendar-event me-1"></i>事件中心</a>
       <a href="/chat/" class="btn btn-light px-4"><i class="bi bi-chat-dots me-1"></i>即时通讯</a>
     </div>
   </div>
@@ -201,147 +133,57 @@
   <div class="stats-row">
     <div class="stat-card">
       <div class="d-flex align-items-center gap-3">
-        <div class="stat-icon" style="background:var(--brand-soft);color:var(--brand)"><i class="bi bi-calendar-event"></i></div>
-        <div><div class="stat-value" id="statEvents" style="color:var(--brand)">-</div><div class="stat-label">事件总数</div></div>
-      </div>
-      <div class="stat-detail" id="statEventsDetail"></div>
-    </div>
-    <div class="stat-card">
-      <div class="d-flex align-items-center gap-3">
         <div class="stat-icon" style="background:#d1fae5;color:#065f46"><i class="bi bi-chat-dots"></i></div>
         <div><div class="stat-value" id="statConversations" style="color:#065f46">-</div><div class="stat-label">会话数</div></div>
       </div>
-      <div class="stat-detail" id="statConvDetail"></div>
     </div>
     <div class="stat-card">
       <div class="d-flex align-items-center gap-3">
         <div class="stat-icon" style="background:#fef3c7;color:#92400e"><i class="bi bi-people"></i></div>
-        <div><div class="stat-value" id="statFriends" style="color:#92400e">-</div><div class="stat-label">好友数</div></div>
+        <div><div class="stat-value" id="statUsers" style="color:#92400e">-</div><div class="stat-label">机构用户</div></div>
       </div>
-      <div class="stat-detail" id="statFriendDetail"></div>
     </div>
     <div class="stat-card">
       <div class="d-flex align-items-center gap-3">
         <div class="stat-icon" style="background:#fce7f3;color:#be185d"><i class="bi bi-bell"></i></div>
-        <div><div class="stat-value" id="statPending" style="color:#be185d">-</div><div class="stat-label">待处理</div></div>
+        <div><div class="stat-value" id="statNotifications" style="color:#be185d">-</div><div class="stat-label">未读通知</div></div>
       </div>
-      <div class="stat-detail" id="statPendingDetail"></div>
     </div>
   </div>
 
-  <!-- Draggable Widget Grid -->
-  <div class="dashboard-grid" id="dashGrid">
-
-    <!-- Widget: Event Breakdown -->
-    <div class="grid-item grid-item--wide dash-widget" data-widget-id="eventBreakdown">
-      <div class="dash-widget-header" draggable="true">
-        <span class="dash-widget-title"><i class="bi bi-pie-chart" style="color:var(--brand)"></i>事件分布</span>
-        <div class="dash-widget-actions">
-          <button class="toggle-collapse" title="折叠"><i class="bi bi-chevron-up"></i></button>
-        </div>
-      </div>
-      <div class="dash-widget-body">
-        <div class="row align-items-center g-3">
-          <div class="col-md-5 text-center">
-            <canvas id="eventDonut" width="130" height="130" style="max-width:130px;margin:0 auto"></canvas>
-          </div>
-          <div class="col-md-7">
-            <div class="d-flex justify-content-between align-items-center mb-1"><span style="font-size:.82rem"><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#1d4ed8;margin-right:6px"></span>售前</span><span class="fw-bold" style="font-size:.82rem" id="evPreCount">0</span></div>
-            <div class="progress mb-2" style="height:5px;border-radius:999px;background:#eef2f6"><div class="progress-bar" id="evPreBar" style="width:0%;background:#1d4ed8;border-radius:999px;transition:width .5s ease"></div></div>
-            <div class="d-flex justify-content-between align-items-center mb-1"><span style="font-size:.82rem"><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#065f46;margin-right:6px"></span>售中</span><span class="fw-bold" style="font-size:.82rem" id="evInCount">0</span></div>
-            <div class="progress mb-2" style="height:5px;border-radius:999px;background:#eef2f6"><div class="progress-bar" id="evInBar" style="width:0%;background:#065f46;border-radius:999px;transition:width .5s ease"></div></div>
-            <div class="d-flex justify-content-between align-items-center mb-1"><span style="font-size:.82rem"><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#92400e;margin-right:6px"></span>售后</span><span class="fw-bold" style="font-size:.82rem" id="evAfterCount">0</span></div>
-            <div class="progress mb-0" style="height:5px;border-radius:999px;background:#eef2f6"><div class="progress-bar" id="evAfterBar" style="width:0%;background:#92400e;border-radius:999px;transition:width .5s ease"></div></div>
-          </div>
-        </div>
-      </div>
-    </div>
+  <!-- Dashboard Grid -->
+  <div class="dashboard-grid">
 
     <!-- Widget: Quick Links -->
-    <div class="grid-item dash-widget" data-widget-id="quickLinks">
-      <div class="dash-widget-header" draggable="true">
+    <div class="dash-widget">
+      <div class="dash-widget-header">
         <span class="dash-widget-title"><i class="bi bi-grid" style="color:var(--brand)"></i>快速入口</span>
-        <div class="dash-widget-actions">
-          <button class="toggle-collapse" title="折叠"><i class="bi bi-chevron-up"></i></button>
-        </div>
       </div>
       <div class="dash-widget-body">
         <div class="quick-links-grid">
-          <a href="/events/" class="quick-link" style="background:var(--brand-soft);color:var(--brand)"><i class="bi bi-calendar-event"></i><span>事件中心</span></a>
           <a href="/chat/" class="quick-link" style="background:#d1fae5;color:#065f46"><i class="bi bi-chat-dots"></i><span>即时通讯</span></a>
-          <a href="/friends/" class="quick-link" style="background:#fef3c7;color:#92400e"><i class="bi bi-people"></i><span>好友管理</span></a>
-          <a href="/profile/" class="quick-link" style="background:#fce7f3;color:#be185d"><i class="bi bi-person-circle"></i><span>个人中心</span></a>
+          <a href="/dashboard/" class="quick-link" style="background:var(--brand-soft);color:var(--brand)"><i class="bi bi-speedometer2"></i><span>工作台</span></a>
         </div>
       </div>
     </div>
 
-    <!-- Widget: My Tasks -->
-    <div class="grid-item dash-widget" data-widget-id="myTasks">
-      <div class="dash-widget-header" draggable="true">
-        <span class="dash-widget-title"><i class="bi bi-check2-square" style="color:#0891b2"></i>我的待办</span>
-        <div class="dash-widget-actions">
-          <button class="btn btn-sm btn-primary" id="dispatchTaskBtn" style="border-radius:999px;padding:2px 10px;font-size:.72rem"><i class="bi bi-send me-1"></i>派单</button>
-          <button class="toggle-collapse ms-1" title="折叠"><i class="bi bi-chevron-up"></i></button>
-        </div>
+    <!-- Widget: Organization Stats -->
+    <div class="dash-widget">
+      <div class="dash-widget-header">
+        <span class="dash-widget-title"><i class="bi bi-building" style="color:var(--brand)"></i>机构信息</span>
       </div>
-      <div class="dash-widget-body" id="myTasksContainer">
-        <div class="dash-empty"><i class="bi bi-check2-square"></i><p>暂无待办任务</p></div>
-      </div>
-    </div>
-
-    <!-- Widget: Mini Calendar -->
-    <div class="grid-item dash-widget" data-widget-id="miniCalendar">
-      <div class="dash-widget-header" draggable="true">
-        <span class="dash-widget-title"><i class="bi bi-calendar3" style="color:var(--brand)"></i><span id="calendarMonth">本月</span></span>
-        <div class="dash-widget-actions">
-          <span class="muted" style="font-size:.72rem" id="todayDate">-</span>
-          <button class="toggle-collapse ms-1" title="折叠"><i class="bi bi-chevron-up"></i></button>
-        </div>
-      </div>
-      <div class="dash-widget-body">
-        <div id="miniCalendar"></div>
-        <div class="mt-3">
-          <div class="small fw-medium mb-1">今日事件</div>
-          <div id="todayEvents" class="small"></div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Widget: Online Friends -->
-    <div class="grid-item dash-widget" data-widget-id="onlineFriends">
-      <div class="dash-widget-header" draggable="true">
-        <span class="dash-widget-title"><i class="bi bi-circle-fill" style="color:#22c55e;font-size:.75rem"></i>在线好友</span>
-        <div class="dash-widget-actions">
-          <span class="muted small" id="onlineFriendCount">0 在线</span>
-          <button class="toggle-collapse ms-1" title="折叠"><i class="bi bi-chevron-up"></i></button>
-        </div>
-      </div>
-      <div class="dash-widget-body" id="onlineFriendsList">
-        <div class="dash-empty"><i class="bi bi-people"></i><p>暂无好友在线</p></div>
-      </div>
-    </div>
-
-    <!-- Widget: Recent Activity -->
-    <div class="grid-item dash-widget" data-widget-id="recentActivity">
-      <div class="dash-widget-header" draggable="true">
-        <span class="dash-widget-title"><i class="bi bi-activity" style="color:var(--brand)"></i>最近动态</span>
-        <div class="dash-widget-actions">
-          <span class="muted small" id="activityCount">0 条</span>
-          <button class="toggle-collapse ms-1" title="折叠"><i class="bi bi-chevron-up"></i></button>
-        </div>
-      </div>
-      <div class="dash-widget-body" id="activityTimeline">
-        <div class="dash-empty"><i class="bi bi-clock-history"></i><p>暂无动态</p></div>
+      <div class="dash-widget-body" id="orgStatsBody">
+        <div class="d-flex justify-content-between align-items-center mb-2"><span class="small">我的机构</span><span class="fw-bold" id="myOrgName">-</span></div>
+        <div class="d-flex justify-content-between align-items-center mb-2"><span class="small">机构成员</span><span class="fw-bold" id="orgMemberCount">-</span></div>
       </div>
     </div>
 
     <!-- Widget: Latest Messages -->
-    <div class="grid-item dash-widget" data-widget-id="latestMessages">
-      <div class="dash-widget-header" draggable="true">
+    <div class="grid-item--full dash-widget">
+      <div class="dash-widget-header">
         <span class="dash-widget-title"><i class="bi bi-chat-text" style="color:var(--brand)"></i>最新消息</span>
         <div class="dash-widget-actions">
           <a href="/chat/" class="small text-decoration-none muted">查看全部</a>
-          <button class="toggle-collapse ms-1" title="折叠"><i class="bi bi-chevron-up"></i></button>
         </div>
       </div>
       <div class="dash-widget-body" id="latestMessages">
@@ -349,28 +191,12 @@
       </div>
     </div>
 
-    <!-- Widget: Organization Stats -->
-    <div class="grid-item dash-widget" data-widget-id="orgStats">
-      <div class="dash-widget-header" draggable="true">
-        <span class="dash-widget-title"><i class="bi bi-building" style="color:var(--brand)"></i>机构统计</span>
-        <div class="dash-widget-actions">
-          <button class="toggle-collapse" title="折叠"><i class="bi bi-chevron-up"></i></button>
-        </div>
-      </div>
-      <div class="dash-widget-body" id="orgStatsBody">
-        <div class="d-flex justify-content-between align-items-center mb-2"><span class="small">总机构数</span><span class="fw-bold" id="orgCount">-</span></div>
-        <div class="d-flex justify-content-between align-items-center mb-2"><span class="small">总用户数</span><span class="fw-bold" id="totalUserCount">-</span></div>
-        <div class="mt-2" id="orgMemberList" style="max-height:120px;overflow-y:auto"></div>
-      </div>
-    </div>
-
     <!-- Widget: Announcements -->
-    <div class="grid-item grid-item--wide dash-widget" data-widget-id="announcements">
-      <div class="dash-widget-header" draggable="true">
+    <div class="grid-item--full dash-widget">
+      <div class="dash-widget-header">
         <span class="dash-widget-title"><i class="bi bi-megaphone" style="color:var(--brand)"></i>通知公告</span>
         <div class="dash-widget-actions">
           <span class="muted small" id="announcementCount">0 条</span>
-          <button class="toggle-collapse ms-1" title="折叠"><i class="bi bi-chevron-up"></i></button>
         </div>
       </div>
       <div class="dash-widget-body" id="announcementList">
@@ -382,412 +208,55 @@
 </div>
 </div>
 
-<!-- Dispatch Task Modal -->
-<div class="modal fade" id="dispatchTaskModal" tabindex="-1">
-  <div class="modal-dialog modal-dialog-centered">
-    <div class="modal-content" style="border-radius:14px;border:none;box-shadow:0 20px 60px rgba(0,0,0,.15)">
-      <div class="modal-header border-0 pb-0"><h5 class="fw-bold">派发任务</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
-      <div class="modal-body">
-        <div class="mb-3"><label class="form-label small fw-medium">任务标题</label><input class="form-control" id="taskTitle" placeholder="输入任务标题" style="border-radius:10px"></div>
-        <div class="mb-3"><label class="form-label small fw-medium">任务描述</label><textarea class="form-control" id="taskDesc" rows="3" placeholder="描述任务详情" style="border-radius:10px"></textarea></div>
-        <div class="mb-3">
-          <label class="form-label small fw-medium">附件</label>
-          <div class="input-group" style="border-radius:10px;overflow:hidden">
-            <input class="form-control" type="file" id="taskAttachment" style="border-radius:0">
-          </div>
-          <div id="taskAttachmentName" class="muted small mt-1"></div>
-        </div>
-        <div class="mb-3">
-          <label class="form-label small fw-medium">处理人</label>
-          <div class="d-flex gap-2"><input class="form-control" id="taskAssigneeSearch" placeholder="搜索用户" style="border-radius:10px"><button class="btn btn-outline-primary" id="taskAssigneeSearchBtn" style="border-radius:10px"><i class="bi bi-search"></i></button></div>
-          <div id="taskAssigneeResults" class="mt-2" style="max-height:150px;overflow-y:auto"></div>
-          <div id="taskAssigneeTag" class="mt-2"></div>
-        </div>
-      </div>
-      <div class="modal-footer border-0 pt-0"><button class="btn btn-secondary" data-bs-dismiss="modal" style="border-radius:10px">取消</button><button class="btn btn-primary" id="saveTaskBtn" style="border-radius:10px">派发任务</button></div>
-    </div>
-  </div>
-</div>
-
-<!-- Task Detail Modal -->
-<div class="modal fade" id="taskDetailModal" tabindex="-1">
-  <div class="modal-dialog modal-dialog-centered">
-    <div class="modal-content" style="border-radius:14px;border:none;box-shadow:0 20px 60px rgba(0,0,0,.15)">
-      <div class="modal-header border-0 pb-0"><h5 class="fw-bold" id="taskDetailTitle">任务详情</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
-      <div class="modal-body" id="taskDetailBody"></div>
-      <div class="modal-footer border-0 pt-0" id="taskDetailFooter"></div>
-    </div>
-  </div>
-</div>
-
-<!-- Memo Modal -->
-<div class="modal fade" id="memoModal" tabindex="-1">
-  <div class="modal-dialog modal-dialog-centered modal-sm">
-    <div class="modal-content" style="border-radius:14px;border:none;box-shadow:0 20px 60px rgba(0,0,0,.15)">
-      <div class="modal-header border-0 pb-0">
-        <h5 class="fw-bold">📝 <span id="memoDate">-</span></h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-      </div>
-      <div class="modal-body">
-        <div id="memoList" class="mb-3" style="max-height:200px;overflow-y:auto"></div>
-        <input type="hidden" id="memoDateInput">
-        <div class="mb-2"><input class="form-control" id="memoTitle" placeholder="备忘标题" style="border-radius:10px"></div>
-        <div class="mb-2"><textarea class="form-control" id="memoContent" rows="2" placeholder="备忘内容（可选）" style="border-radius:10px"></textarea></div>
-      </div>
-      <div class="modal-footer border-0 pt-0">
-        <button class="btn btn-secondary" data-bs-dismiss="modal" style="border-radius:10px">关闭</button>
-        <button class="btn btn-primary" id="saveMemoBtn" style="border-radius:10px"><i class="bi bi-plus-lg me-1"></i>添加备忘</button>
-      </div>
-    </div>
-  </div>
-</div>
-
 <script>
-// ===== Drag & Drop Widget Reorder =====
-const GRID_STORAGE_KEY = 'dash_widget_order';
-
-function loadWidgetOrder(){
-  try { return JSON.parse(localStorage.getItem(GRID_STORAGE_KEY)); } catch(e){ return null; }
-}
-function saveWidgetOrder(order){
-  localStorage.setItem(GRID_STORAGE_KEY, JSON.stringify(order));
-}
-function applyWidgetOrder(){
-  const grid = document.getElementById('dashGrid');
-  const saved = loadWidgetOrder();
-  if(!saved || saved.length === 0) return;
-  const items = grid.querySelectorAll('.dash-widget');
-  const map = {};
-  items.forEach(el => { map[el.dataset.widgetId] = el; });
-  saved.forEach(id => { if(map[id]) grid.appendChild(map[id]); });
-  // Append any new widgets not in saved order
-  items.forEach(el => { if(!saved.includes(el.dataset.widgetId)) grid.appendChild(el); });
-}
-
-// Drag events
-document.addEventListener('dragstart', e => {
-  const header = e.target.closest('.dash-widget-header');
-  if(!header) return;
-  const widget = header.closest('.dash-widget');
-  widget.classList.add('is-dragging');
-  e.dataTransfer.effectAllowed = 'move';
-  e.dataTransfer.setData('text/plain', widget.dataset.widgetId);
-});
-document.addEventListener('dragend', e => {
-  document.querySelectorAll('.dash-widget').forEach(w => w.classList.remove('is-dragging', 'drag-over'));
-  // Save new order
-  const grid = document.getElementById('dashGrid');
-  const order = Array.from(grid.querySelectorAll('.dash-widget')).map(w => w.dataset.widgetId);
-  saveWidgetOrder(order);
-});
-document.addEventListener('dragover', e => {
-  const widget = e.target.closest('.dash-widget');
-  if(!widget || widget.classList.contains('is-dragging')) return;
-  e.preventDefault();
-  e.dataTransfer.dropEffect = 'move';
-  document.querySelectorAll('.dash-widget').forEach(w => w.classList.remove('drag-over'));
-  widget.classList.add('drag-over');
-});
-document.addEventListener('dragleave', e => {
-  const widget = e.target.closest('.dash-widget');
-  if(widget) widget.classList.remove('drag-over');
-});
-document.addEventListener('drop', e => {
-  e.preventDefault();
-  const target = e.target.closest('.dash-widget');
-  const draggedId = e.dataTransfer.getData('text/plain');
-  if(!target || target.dataset.widgetId === draggedId) return;
-  const grid = document.getElementById('dashGrid');
-  const dragged = grid.querySelector(`[data-widget-id="${draggedId}"]`);
-  if(dragged && target) grid.insertBefore(dragged, target.nextSibling);
-  document.querySelectorAll('.dash-widget').forEach(w => w.classList.remove('drag-over'));
-});
-
-// ===== Collapse/Expand =====
-document.addEventListener('click', e => {
-  const btn = e.target.closest('.toggle-collapse');
-  if(!btn) return;
-  const widget = btn.closest('.dash-widget');
-  if(!widget) return;
-  const body = widget.querySelector('.dash-widget-body');
-  if(!body) return;
-  body.classList.toggle('collapsed');
-  const icon = btn.querySelector('i');
-  if(icon) icon.className = body.classList.contains('collapsed') ? 'bi bi-chevron-down' : 'bi bi-chevron-up';
-  // Save collapse state
-  const state = JSON.parse(localStorage.getItem('dash_widget_collapse') || '{}');
-  state[widget.dataset.widgetId] = body.classList.contains('collapsed');
-  localStorage.setItem('dash_widget_collapse', JSON.stringify(state));
-});
-
-function restoreCollapseState(){
-  const state = JSON.parse(localStorage.getItem('dash_widget_collapse') || '{}');
-  Object.keys(state).forEach(id => {
-    const widget = document.querySelector(`[data-widget-id="${id}"]`);
-    if(!widget || !state[id]) return;
-    const body = widget.querySelector('.dash-widget-body');
-    const icon = widget.querySelector('.toggle-collapse i');
-    if(body) body.classList.add('collapsed');
-    if(icon) icon.className = 'bi bi-chevron-down';
-  });
-}
-
-// ===== Reset Layout =====
-document.getElementById('resetLayoutBtn').addEventListener('click', () => {
-  localStorage.removeItem(GRID_STORAGE_KEY);
-  localStorage.removeItem('dash_widget_collapse');
-  location.reload();
-});
-
-// ===== Calendar with Memo/Task Annotations =====
-let memoDates = new Set();
-let taskDates = new Set();
-let currentYear, currentMonth;
-
-async function loadCalendarAnnotations(){
-  const now = new Date();
-  currentYear = now.getFullYear();
-  currentMonth = now.getMonth() + 1;
-  try {
-    const r = await fetch(`/api/memos/dates/?year=${currentYear}&month=${currentMonth}`, {credentials:'include'});
-    const data = await r.json();
-    memoDates = new Set(data.memo_dates || []);
-    taskDates = new Set(data.task_dates || []);
-  } catch(e){ /* silent */ }
-  renderMiniCalendar();
-}
-
-function renderMiniCalendar(){
-  const now = new Date();
-  const year = now.getFullYear(), month = now.getMonth(), today = now.getDate();
-  const firstDay = new Date(year, month, 1).getDay();
-  const daysInMonth = new Date(year, month + 1, 0).getDate();
-  const monthNames = ['一月','二月','三月','四月','五月','六月','七月','八月','九月','十月','十一月','十二月'];
-  document.getElementById('calendarMonth').textContent = `${year}年${monthNames[month]}`;
-  document.getElementById('todayDate').textContent = `${year}/${String(month+1).padStart(2,'0')}/${String(today).padStart(2,'0')}`;
-  const dayHeaders = ['日','一','二','三','四','五','六'];
-  let html = '<div class="calendar-grid">';
-  dayHeaders.forEach(d => { html += `<div class="day-header">${d}</div>`; });
-  for(let i = 0; i < firstDay; i++){ html += '<div></div>'; }
-  for(let d = 1; d <= daysInMonth; d++){
-    const dateStr = `${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
-    const hasMemo = memoDates.has(dateStr);
-    const hasTask = taskDates.has(dateStr);
-    const dots = [];
-    if(hasMemo) dots.push('<span style="width:4px;height:4px;border-radius:50%;background:var(--brand);display:inline-block"></span>');
-    if(hasTask) dots.push('<span style="width:4px;height:4px;border-radius:50%;background:#f59e0b;display:inline-block"></span>');
-    html += `<div class="day${d === today ? ' today' : ''}" data-date="${dateStr}" style="position:relative;cursor:pointer">
-      ${d}
-      ${dots.length ? `<div style="position:absolute;bottom:1px;left:50%;transform:translateX(-50%);display:flex;gap:2px">${dots.join('')}</div>` : ''}
-    </div>`;
-  }
-  html += '</div>';
-  const cal = document.getElementById('miniCalendar');
-  cal.innerHTML = html;
-  // Click day to add memo
-  cal.querySelectorAll('.day').forEach(el => {
-    el.addEventListener('click', () => openMemoModal(el.dataset.date));
-  });
-}
-
-// ===== Memo Modal =====
-async function openMemoModal(dateStr){
-  document.getElementById('memoDate').textContent = dateStr;
-  document.getElementById('memoDateInput').value = dateStr;
-  document.getElementById('memoTitle').value = '';
-  document.getElementById('memoContent').value = '';
-  await refreshMemoList(dateStr);
-  const modalEl = document.getElementById('memoModal');
-  let modal = bootstrap.Modal.getInstance(modalEl);
-  if(!modal) modal = new bootstrap.Modal(modalEl);
-  modal.show();
-}
-
-async function refreshMemoList(dateStr){
-  try {
-    const r = await fetch(`/api/memos/?date=${dateStr}`, {credentials:'include'});
-    const data = await r.json();
-    const list = document.getElementById('memoList');
-    if(data.memos && data.memos.length){
-      list.innerHTML = data.memos.map(m => `
-        <div class="d-flex justify-content-between align-items-start p-2 border-bottom">
-          <div style="flex:1;min-width:0">
-            <div class="fw-medium" style="font-size:.85rem">${m.title}</div>
-            ${m.content ? `<div class="muted small">${m.content}</div>` : ''}
-            <div class="muted" style="font-size:.65rem">${new Date(m.created_at).toLocaleString('zh-CN')}</div>
-          </div>
-          <button class="btn btn-sm p-0 delete-memo-btn" data-id="${m.id}" style="font-size:.7rem;color:var(--muted);background:none;border:none" title="删除"><i class="bi bi-x"></i></button>
-        </div>
-      `).join('');
-    } else {
-      list.innerHTML = '<div class="muted small py-2 text-center">暂无备忘，添加一条吧</div>';
-    }
-  } catch(e){}
-}
-
-// Delete memo via event delegation (works for dynamically added buttons)
-document.addEventListener('click', async (e) => {
-  const btn = e.target.closest('.delete-memo-btn');
-  if(!btn) return;
-  const dateStr = document.getElementById('memoDateInput').value;
-  await fetch(`/api/memos/${btn.dataset.id}/delete/`, {method:'POST', credentials:'include'});
-  showToast('备忘已删除');
-  await refreshMemoList(dateStr);
-  loadCalendarAnnotations();
-});
-
-document.getElementById('saveMemoBtn').addEventListener('click', async () => {
-  const date = document.getElementById('memoDateInput').value;
-  const title = document.getElementById('memoTitle').value.trim();
-  const content = document.getElementById('memoContent').value.trim();
-  if(!title){ showToast('请输入备忘标题', 'warning'); return; }
-  const r = await fetch('/api/memos/create/', {
-    method:'POST', headers:{'Content-Type':'application/json'}, credentials:'include',
-    body: JSON.stringify({date, title, content})
-  });
-  if(!r.ok){ showToast('添加失败', 'danger'); return; }
-  showToast('备忘已添加');
-  document.getElementById('memoTitle').value = '';
-  document.getElementById('memoContent').value = '';
-  await refreshMemoList(date);
-  loadCalendarAnnotations();
-});
-
-// ===== Donut Chart =====
-function drawDonut(pre, ins, aft){
-  const canvas = document.getElementById('eventDonut');
-  if(!canvas) return;
-  const ctx = canvas.getContext('2d');
-  const total = pre + ins + aft || 1;
-  const cx = canvas.width/2, cy = canvas.height/2, r = 52, lw = 16;
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-  const data = [
-    { v: pre / total, color: '#1d4ed8' },
-    { v: ins / total, color: '#065f46' },
-    { v: aft / total, color: '#92400e' },
-  ];
-  let startAngle = -Math.PI / 2;
-  data.forEach(d => {
-    if(d.v <= 0) return;
-    const endAngle = startAngle + d.v * 2 * Math.PI;
-    ctx.beginPath(); ctx.arc(cx, cy, r, startAngle, endAngle);
-    ctx.strokeStyle = d.color; ctx.lineWidth = lw; ctx.stroke();
-    startAngle = endAngle;
-  });
-  ctx.fillStyle = '#1e293b'; ctx.font = 'bold 16px sans-serif';
-  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-  ctx.fillText(total, cx, cy - 5);
-  ctx.fillStyle = '#64748b'; ctx.font = '10px sans-serif';
-  ctx.fillText('总计', cx, cy + 13);
-}
-
-// ===== Initialize =====
 document.addEventListener('DOMContentLoaded', async () => {
-  loadCalendarAnnotations();
-  // Apply saved layout before anything else
-  applyWidgetOrder();
-  restoreCollapseState();
-
   if(!CURRENT_USER) await loadCurrentUser();
   if(CURRENT_USER){
     document.getElementById('welcomeMsg').textContent = `欢迎回来，${CURRENT_USER.display_name || CURRENT_USER.username}`;
     if(CURRENT_USER.organization){
       document.getElementById('orgInfo').innerHTML = `<i class="bi bi-building me-1"></i>${CURRENT_USER.organization}`;
+      document.getElementById('myOrgName').textContent = CURRENT_USER.organization;
     }
   }
 
   try {
-    const [events, convs, friends] = await Promise.all([
-      fetch('/api/events/', {credentials:'include'}).then(r=>r.json()),
-      fetch('/api/conversations/', {credentials:'include'}).then(r=>r.json()),
-      fetch('/api/friends/', {credentials:'include'}).then(r=>r.json()),
-    ]);
-    const evCounts = events.counts || {};
-    const totalEvents = Object.values(evCounts).reduce((a,b)=>a+b, 0);
-    const convData = convs.conversations || [];
-    const friendsData = friends.friends || [];
-    const friendCount = friendsData.length;
-    const pendingCount = (friends.pending_requests || []).length;
-    document.getElementById('statEvents').textContent = totalEvents;
-    document.getElementById('statConversations').textContent = convData.length;
-    document.getElementById('statFriends').textContent = friendCount;
-    document.getElementById('statPending').textContent = pendingCount;
-    document.getElementById('statEventsDetail').textContent = `售前 ${evCounts.pre_sales||0} · 售中 ${evCounts.in_sales||0} · 售后 ${evCounts.after_sales||0}`;
-    const directCount = convData.filter(c => c.type === 'direct').length;
-    const groupCount = convData.filter(c => c.type === 'group').length;
-    document.getElementById('statConvDetail').textContent = `私聊 ${directCount} · 群聊 ${groupCount}`;
-    const onlineFriendsTotal = friendsData.filter(f => f.online_status === 'online').length;
-    document.getElementById('statFriendDetail').textContent = `${onlineFriendsTotal} 在线 · ${friendCount - onlineFriendsTotal} 离线`;
-    document.getElementById('statPendingDetail').textContent = pendingCount > 0 ? `${pendingCount} 个待处理` : '暂无待处理';
-
-    const pre = evCounts.pre_sales || 0, ins = evCounts.in_sales || 0, after = evCounts.after_sales || 0;
-    document.getElementById('evPreCount').textContent = pre;
-    document.getElementById('evInCount').textContent = ins;
-    document.getElementById('evAfterCount').textContent = after;
-    const maxEv = Math.max(pre, ins, after, 1);
-    document.getElementById('evPreBar').style.width = (pre/maxEv*100)+'%';
-    document.getElementById('evInBar').style.width = (ins/maxEv*100)+'%';
-    document.getElementById('evAfterBar').style.width = (after/maxEv*100)+'%';
-    drawDonut(pre, ins, after);
-
-    // Online friends
-    const onlineList = document.getElementById('onlineFriendsList');
-    const online = friendsData.filter(f => f.online_status === 'online').slice(0, 10);
-    document.getElementById('onlineFriendCount').textContent = `${online.length} 在线`;
-    if(online.length){
-      onlineList.innerHTML = '';
-      online.forEach(f => {
-        const d = document.createElement('div');
-        d.className = 'd-flex align-items-center gap-2 py-1';
-        d.innerHTML = `<img src="${f.avatar_url || '/static/avater.jpeg'}" class="online-avatar" onerror="this.src='/static/avater.jpeg'">
-          <div style="flex:1"><div style="font-size:.8rem;font-weight:500">${f.display_name || f.username}</div>
-          <div style="font-size:.7rem;color:#22c55e"><span class="status-dot online" style="width:6px;height:6px;border-width:1px;margin-right:4px"></span>在线${f.organization ? ' · '+f.organization : ''}</div></div>
-          <button class="btn btn-sm btn-outline-primary chat-friend-btn-dash" data-id="${f.id}" style="border-radius:999px;font-size:.7rem;padding:2px 8px"><i class="bi bi-chat"></i></button>`;
-        onlineList.appendChild(d);
-      });
-      onlineList.querySelectorAll('.chat-friend-btn-dash').forEach(b => {
-        b.addEventListener('click', async (e) => {
-          e.stopPropagation();
-          const rid = parseInt(b.dataset.id);
-          const r = await fetch('/api/conversations/create/', {method:'POST', headers:{'Content-Type':'application/json'}, credentials:'include', body: JSON.stringify({type:'direct', participant_ids:[rid]})});
-          const data = await r.json();
-          if(data.id) location.href = '/chat/?conv='+data.id;
-        });
-      });
-    }
-
-    // Activity timeline
-    const evList = events.events || [];
-    const timeline = document.getElementById('activityTimeline');
-    if(evList.length){
-      timeline.innerHTML = '';
-      evList.sort((a,b) => new Date(b.updated_at)-new Date(a.updated_at)).slice(0, 10).forEach(e => {
-        const catMap = {pre_sales:'售前', in_sales:'售中', after_sales:'售后', custom:'自定义'};
-        const d = document.createElement('div'); d.className = 'timeline-item';
-        d.innerHTML = `<div class="time">${new Date(e.updated_at).toLocaleString('zh-CN')}</div>
-          <div style="font-size:.85rem;margin-top:2px"><strong>${e.title}</strong> <span class="muted small">- ${catMap[e.category]||e.category}</span>${e.group_id ? ' <span class="tag tag-group ms-1" style="font-size:.62rem"><i class="bi bi-people me-1"></i>已建群</span>' : ''}</div>`;
-        timeline.appendChild(d);
-      });
-      document.getElementById('activityCount').textContent = `${evList.length} 条动态`;
-    }
+    // Load conversations for stats and latest messages
+    const convResp = await fetch('/api/conversations/', {credentials:'include'});
+    const convData = await convResp.json();
+    const convs = convData.conversations || [];
+    document.getElementById('statConversations').textContent = convs.length;
 
     // Latest messages
     const msgContainer = document.getElementById('latestMessages');
-    if(convData.length){
+    if(convs.length){
       msgContainer.innerHTML = '';
-      convData.sort((a,b) => (b.last_message_at||'')>(a.last_message_at||'')?1:-1).slice(0, 5).forEach(c => {
-        const dotColor = c.type === 'group' ? 'purple' : 'blue';
+      convs.sort((a,b) => (b.last_message_at||'')>(a.last_message_at||'')?1:-1).slice(0, 6).forEach(c => {
         const d = document.createElement('div'); d.className = 'feed-item';
         d.onclick = () => { location.href = '/chat/?conv='+c.id; };
-        d.innerHTML = `<span class="feed-dot ${dotColor}"></span>
-          <div style="flex:1;min-width:0"><div style="font-size:.78rem;font-weight:500">${c.title||'未命名'}</div>
+        d.innerHTML = `<span class="feed-dot" style="background:${c.type === 'group' ? '#7c3aed' : '#1a73e8'}"></span>
+          <div style="flex:1;min-width:0"><div style="font-size:.8rem;font-weight:500">${c.title||'未命名'}</div>
           <div class="muted" style="font-size:.72rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${c.last_message||'暂无消息'}</div></div>
           <span class="badge rounded-pill text-bg-${c.unread_count>0?'danger':'light'}" style="font-size:.62rem">${c.unread_count||''}</span>
-          <span class="muted d-none-xs" style="font-size:.62rem">${c.last_message_at ? new Date(c.last_message_at).toLocaleTimeString('zh-CN', {hour:'2-digit',minute:'2-digit'}) : ''}</span>`;
+          <span class="muted d-none d-sm-inline" style="font-size:.62rem">${c.last_message_at ? new Date(c.last_message_at).toLocaleTimeString('zh-CN', {hour:'2-digit',minute:'2-digit'}) : ''}</span>`;
         msgContainer.appendChild(d);
       });
     }
   } catch(e){ console.error(e); }
+
+  // Notifications count
+  try {
+    const notifResp = await fetch('/api/notifications/', {credentials:'include'});
+    const notifData = await notifResp.json();
+    document.getElementById('statNotifications').textContent = notifData.unread_count || 0;
+  } catch(e){}
+
+  // User count (from search API)
+  try {
+    const userResp = await fetch('/api/users/search/?q=', {credentials:'include'});
+    const userData = await userResp.json();
+    const users = userData.users || [];
+    document.getElementById('statUsers').textContent = users.length > 0 ? users.length + '+' : '-';
+  } catch(e){}
 
   // Announcements
   try {
@@ -806,140 +275,6 @@ document.addEventListener('DOMContentLoaded', async () => {
       `).join('');
     }
   } catch(e){}
-
-  // Today's events
-  try {
-    const today = new Date().toISOString().slice(0,10);
-    const evResp = await fetch('/api/events/', {credentials:'include'});
-    const evData = await evResp.json();
-    const todayEvents = (evData.events||[]).filter(e => e.created_at?.startsWith(today));
-    const container = document.getElementById('todayEvents');
-    if(todayEvents.length){
-      container.innerHTML = todayEvents.slice(0,5).map(e => `<div style="padding:2px 0;font-size:.78rem"><i class="bi bi-dot me-1" style="color:var(--brand)"></i>${e.title}</div>`).join('');
-    } else {
-      container.innerHTML = '<div class="muted small">今日暂无新事件</div>';
-    }
-  } catch(e){}
-
-  // ===== Task Dispatch =====
-  let selectedAssignee = null;
-  const urlParams = new URLSearchParams(location.search);
-  const taskIdFromUrl = urlParams.get('task');
-  if(taskIdFromUrl) loadTaskDetail(parseInt(taskIdFromUrl));
-
-  async function loadMyTasks(){
-    try {
-      const r = await fetch('/api/tasks/', {credentials:'include'});
-      const data = await r.json();
-      const tasks = (data.tasks||[]).filter(t => t.status !== 'completed' && t.status !== 'cancelled');
-      const container = document.getElementById('myTasksContainer');
-      if(!tasks.length){ container.innerHTML = '<div class="dash-empty"><i class="bi bi-check2-square"></i><p>暂无待办任务</p></div>'; return; }
-      container.innerHTML = '';
-      tasks.slice(0, 10).forEach(t => {
-        const statusColors = {pending:'#f59e0b', in_progress:'#1a73e8', completed:'#22c55e', cancelled:'#94a3b8'};
-        const statusMap = {pending:'待处理', in_progress:'进行中', completed:'已完成', cancelled:'已取消'};
-        const d = document.createElement('div'); d.className = 'feed-item';
-        d.onclick = () => loadTaskDetail(t.id);
-        d.innerHTML = `<span class="feed-dot" style="background:${statusColors[t.status]||'#94a3b8'}"></span>
-          <div style="flex:1;min-width:0"><div style="font-size:.8rem;font-weight:500">${t.title}</div>
-          <div class="muted" style="font-size:.7rem">来自 ${t.created_by} · ${new Date(t.created_at).toLocaleDateString('zh-CN')}</div></div>
-          <span class="tag" style="background:${statusColors[t.status]||'#94a3b8'};color:#fff;font-size:.62rem">${statusMap[t.status]||t.status}</span>`;
-        container.appendChild(d);
-      });
-    } catch(e){}
-  }
-
-  async function loadTaskDetail(taskId){
-    try {
-      const r = await fetch(`/api/tasks/${taskId}/`, {credentials:'include'});
-      if(!r.ok) return;
-      const t = await r.json();
-      const statusMap = {pending:'待处理', in_progress:'进行中', completed:'已完成', cancelled:'已取消'};
-      const body = document.getElementById('taskDetailBody');
-      const isAssignee = CURRENT_USER && t.assignee_id === CURRENT_USER.id;
-      const isCreator = CURRENT_USER && t.created_by_id === CURRENT_USER.id;
-      body.innerHTML = `<div class="mb-3"><div class="d-flex align-items-center gap-2 mb-2"><strong style="font-size:1.05rem">${t.title}</strong><span class="tag" style="background:${t.status==='completed'?'#22c55e':t.status==='pending'?'#f59e0b':'#1a73e8'};color:#fff">${statusMap[t.status]||t.status}</span></div>
-        ${t.description ? '<div class="muted mb-2" style="font-size:.88rem">'+t.description+'</div>' : ''}
-        ${t.content ? '<div class="mb-2" style="font-size:.88rem;white-space:pre-wrap">'+t.content+'</div>' : ''}
-        ${t.attachment_url ? '<div class="mb-2"><a href="'+t.attachment_url+'" target="_blank" class="btn btn-sm btn-outline-primary rounded-pill"><i class="bi bi-paperclip me-1"></i>'+(t.attachment_name||'附件')+'</a></div>' : ''}
-        <div class="d-flex align-items-center gap-3 muted" style="font-size:.8rem"><span><i class="bi bi-person me-1"></i>派单人: ${t.created_by}</span><span><i class="bi bi-person-check me-1"></i>处理人: ${t.assignee}</span></div>
-        <div class="muted mt-1" style="font-size:.75rem"><i class="bi bi-clock me-1"></i>创建于 ${new Date(t.created_at).toLocaleString('zh-CN')}</div></div>`;
-      const footer = document.getElementById('taskDetailFooter'); footer.innerHTML = '';
-      if(isAssignee && t.status !== 'completed'){
-        const cb = document.createElement('button'); cb.className = 'btn btn-success rounded-pill'; cb.innerHTML = '<i class="bi bi-check-lg me-1"></i>办结';
-        cb.onclick = async () => { const res = await fetch(`/api/tasks/${t.id}/status/`, {method:'POST', headers:{'Content-Type':'application/json'}, credentials:'include', body: JSON.stringify({status:'completed'})}); if(res.ok){ showToast('任务已办结','success'); bootstrap.Modal.getInstance(document.getElementById('taskDetailModal')).hide(); loadMyTasks(); } };
-        footer.appendChild(cb);
-      }
-      if(t.status === 'pending' && isAssignee){
-        const sb = document.createElement('button'); sb.className = 'btn btn-primary rounded-pill ms-2'; sb.innerHTML = '<i class="bi bi-play me-1"></i>开始处理';
-        sb.onclick = async () => { const res = await fetch(`/api/tasks/${t.id}/status/`, {method:'POST', headers:{'Content-Type':'application/json'}, credentials:'include', body: JSON.stringify({status:'in_progress'})}); if(res.ok){ showToast('已开始处理','success'); bootstrap.Modal.getInstance(document.getElementById('taskDetailModal')).hide(); loadMyTasks(); } };
-        footer.appendChild(sb);
-      }
-      if(isCreator && t.status !== 'cancelled'){
-        const cb = document.createElement('button'); cb.className = 'btn btn-outline-danger rounded-pill ms-2'; cb.innerHTML = '<i class="bi bi-x me-1"></i>取消任务';
-        cb.onclick = async () => { if(!confirm('确定取消该任务？')) return; const res = await fetch(`/api/tasks/${t.id}/status/`, {method:'POST', headers:{'Content-Type':'application/json'}, credentials:'include', body: JSON.stringify({status:'cancelled'})}); if(res.ok){ showToast('任务已取消'); bootstrap.Modal.getInstance(document.getElementById('taskDetailModal')).hide(); loadMyTasks(); } };
-        footer.appendChild(cb);
-      }
-      if(!footer.innerHTML){ footer.innerHTML = '<button class="btn btn-secondary rounded-pill" data-bs-dismiss="modal">关闭</button>'; }
-      else { const cb = document.createElement('button'); cb.className = 'btn btn-secondary rounded-pill ms-2'; cb.setAttribute('data-bs-dismiss','modal'); cb.textContent = '关闭'; footer.appendChild(cb); }
-      new bootstrap.Modal(document.getElementById('taskDetailModal')).show();
-    } catch(e){}
-  }
-
-  document.getElementById('dispatchTaskBtn').addEventListener('click', () => {
-    selectedAssignee = null;
-    ['taskTitle','taskDesc','taskAssigneeSearch'].forEach(id => document.getElementById(id).value='');
-    ['taskAssigneeResults','taskAssigneeTag'].forEach(id => document.getElementById(id).innerHTML='');
-    new bootstrap.Modal(document.getElementById('dispatchTaskModal')).show();
-  });
-  document.getElementById('taskAssigneeSearchBtn').addEventListener('click', async () => {
-    const q = document.getElementById('taskAssigneeSearch').value.trim();
-    if(!q) return;
-    const r = await fetch(`/api/users/search/?q=${encodeURIComponent(q)}`, {credentials:'include'});
-    const data = await r.json();
-    const container = document.getElementById('taskAssigneeResults'); container.innerHTML = '';
-    (data.users||[]).forEach(u => {
-      const d = document.createElement('div'); d.className = 'd-flex align-items-center justify-content-between p-2 border-bottom';
-      d.innerHTML = `<span><img src="${u.avatar_url||'/static/avater.jpeg'}" class="avatar-sm me-2">${u.display_name||u.username}<span class="muted small ms-2">${u.organization||''}</span></span>
-        <button class="btn btn-sm btn-outline-primary select-assignee-btn" data-id="${u.id}" data-name="${u.display_name||u.username}" style="border-radius:999px">选择</button>`;
-      container.appendChild(d);
-    });
-  });
-  document.addEventListener('click', e => {
-    if(e.target.classList.contains('select-assignee-btn')){
-      selectedAssignee = {id:parseInt(e.target.dataset.id), name:e.target.dataset.name};
-      document.getElementById('taskAssigneeTag').innerHTML = `<span class="tag" style="background:var(--brand-soft);color:var(--brand)"><i class="bi bi-person me-1"></i>${selectedAssignee.name}<button class="btn-close btn-close-sm ms-1" id="clearAssigneeBtn" style="font-size:.55rem"></button></span>`;
-      document.getElementById('taskAssigneeResults').innerHTML = ''; document.getElementById('taskAssigneeSearch').value = '';
-      document.getElementById('clearAssigneeBtn')?.addEventListener('click', () => { selectedAssignee = null; document.getElementById('taskAssigneeTag').innerHTML = ''; });
-    }
-  });
-  document.getElementById('saveTaskBtn').addEventListener('click', async () => {
-    const title = document.getElementById('taskTitle').value.trim();
-    if(!title){ showToast('请输入任务标题','warning'); return; }
-    if(!selectedAssignee){ showToast('请选择处理人','warning'); return; }
-    const fileInput = document.getElementById('taskAttachment');
-    let body;
-    let headers = {};
-    if(fileInput && fileInput.files.length > 0){
-      const fd = new FormData();
-      fd.append('title', title);
-      fd.append('description', document.getElementById('taskDesc').value.trim());
-      fd.append('assignee_id', selectedAssignee.id.toString());
-      fd.append('attachment', fileInput.files[0]);
-      body = fd;
-    } else {
-      headers['Content-Type'] = 'application/json';
-      body = JSON.stringify({title, description: document.getElementById('taskDesc').value.trim(), assignee_id: selectedAssignee.id});
-    }
-    const r = await fetch('/api/tasks/create/', {method:'POST', headers, credentials:'include', body});
-    const data = await r.json();
-    if(!r.ok){ showToast(data.detail||'派发失败','danger'); return; }
-    showToast(`任务已派发给 ${selectedAssignee.name}`,'success');
-    bootstrap.Modal.getInstance(document.getElementById('dispatchTaskModal')).hide();
-    loadMyTasks();
-  });
-
-  loadMyTasks();
 });
 </script>
 {% endblock %}

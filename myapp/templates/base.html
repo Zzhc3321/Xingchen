@@ -302,7 +302,7 @@
               <div class="empty-state small py-3"><i class="bi bi-bell-slash" style="font-size:1.5rem"></i><p class="mt-1">暂无通知</p></div>
             </div>
             <div class="text-center p-2 border-top small">
-              <a href="/friends/" class="text-decoration-none muted">查看好友申请</a>
+              <span class="muted">暂无更多通知</span>
             </div>
           </div>
         </li>
@@ -322,7 +322,6 @@
               <div class="small opacity-75" id="ddBio"></div>
               <div class="mt-2"><span class="badge rounded-pill text-bg-light" id="ddStatus">在线</span></div>
             </div>
-            <a class="dropdown-item py-2" href="/profile/"><i class="bi bi-person-circle me-2"></i>个人中心</a>
             <a class="dropdown-item py-2" href="/dashboard/"><i class="bi bi-speedometer2 me-2"></i>工作台</a>
             <div class="dropdown-divider"></div>
             <a class="dropdown-item py-2 text-danger" href="#" id="logoutBtn"><i class="bi bi-box-arrow-right me-2"></i>退出登录</a>
@@ -345,17 +344,15 @@
         <nav class="mt-2">
           <ul class="nav sidebar-menu flex-column" role="navigation" aria-label="导航菜单">
             <li class="nav-header">核心模块</li>
-            <li class="nav-item"><a href="/dashboard/" class="nav-link {% if active_nav == 'dashboard' %}active{% endif %}"><i class="bi bi-speedometer2"></i><p>门户工作台</p></a></li>
-            <li class="nav-item"><a href="/events/" class="nav-link {% if active_nav == 'events' %}active{% endif %}"><i class="bi bi-calendar-event"></i><p>事件中心</p></a></li>
+            <li class="nav-item"><a href="/dashboard/" class="nav-link {% if active_nav == 'dashboard' %}active{% endif %}"><i class="bi bi-speedometer2"></i><p>工作台</p></a></li>
             <li class="nav-item"><a href="/chat/" class="nav-link {% if active_nav == 'chat' %}active{% endif %}"><i class="bi bi-chat-dots"></i><p>即时通讯</p></a></li>
-            <li class="nav-item"><a href="/friends/" class="nav-link {% if active_nav == 'friends' %}active{% endif %}"><i class="bi bi-people"></i><p>好友与申请</p></a></li>
-            <li class="nav-item"><a href="/profile/" class="nav-link {% if active_nav == 'profile' %}active{% endif %}"><i class="bi bi-person-circle"></i><p>个人中心</p></a></li>
+            <li class="nav-item"><a href="/friends/" class="nav-link {% if active_nav == 'friends' %}active{% endif %}"><i class="bi bi-people"></i><p>好友管理</p></a></li>
           </ul>
         </nav>
         <div class="sidebar-footer">
-          <a href="/profile/">
-            <i class="bi bi-gear"></i>
-            <span>设置</span>
+          <a href="/dashboard/">
+            <i class="bi bi-speedometer2"></i>
+            <span>工作台</span>
           </a>
         </div>
       </div>
@@ -474,11 +471,11 @@ function connectNotificationWS(){
 }
 
 const NOTIF_CONFIG = {
-  friend_request: { icon: 'bi-person-plus', color: '#1a73e8', toast: true, label: '好友申请' },
-  friend_accepted: { icon: 'bi-check-circle', color: '#22c55e', toast: true, label: '好友通过' },
   new_message: { icon: 'bi-chat-dots', color: '#3b82f6', toast: true, label: '新消息' },
   group_created: { icon: 'bi-people', color: '#7c3aed', toast: true, label: '建群通知' },
   group_invite: { icon: 'bi-person-plus', color: '#f59e0b', toast: true, label: '群聊邀请' },
+  friend_request: { icon: 'bi-person-plus', color: '#22c55e', toast: true, label: '好友申请' },
+  friend_accepted: { icon: 'bi-people', color: '#0891b2', toast: true, label: '好友申请通过' },
   task_assigned: { icon: 'bi-check2-square', color: '#0891b2', toast: true, label: '任务派单' },
   system: { icon: 'bi-megaphone', color: '#64748b', toast: true, label: '系统通知' },
 };
@@ -493,20 +490,24 @@ function handleNotifEvent(data){
   const notifId = data.id;
 
   switch(data.type){
-    case 'friend_request':
-      actionBtn = '<a href="/friends/" class="btn btn-sm btn-outline-primary" style="border-radius:999px;font-size:.72rem;padding:2px 10px">处理</a>';
-      showToast(`好友申请：${data.message || '新的好友申请'}`, 'brand');
-      break;
-
-    case 'friend_accepted':
-      showToast(`好友通过：${data.message || '好友请求已通过'}`, 'success');
-      break;
-
     case 'new_message':
     case 'group_created':
     case 'group_invite':
     case 'task_assigned':
       showToast(`${cfg.label}：${data.message ? data.message.substring(0, 60) : ''}`, 'brand');
+      break;
+
+    case 'friend_request':
+      showToast(`好友申请：${data.message || ''}`, 'brand');
+      actionBtn = `
+        <div class="d-flex gap-1 flex-shrink-0">
+          <button class="btn btn-sm btn-success notif-accept-friend rounded-pill" data-id="${notifId || ''}" style="font-size:.7rem;padding:2px 8px"><i class="bi bi-check-lg"></i></button>
+          <button class="btn btn-sm btn-outline-secondary notif-reject-friend rounded-pill" data-id="${notifId || ''}" style="font-size:.7rem;padding:2px 8px"><i class="bi bi-x"></i></button>
+        </div>`;
+      break;
+
+    case 'friend_accepted':
+      showToast(`好友申请通过：${data.message || ''}`, 'success');
       break;
 
     case 'system':
@@ -555,7 +556,41 @@ function addNotifItem(html){
 }
 
 // Click handler for notification items via event delegation
-document.addEventListener('click', e => {
+document.addEventListener('click', async e => {
+  // Accept friend request
+  const acceptBtn = e.target.closest('.notif-accept-friend');
+  if(acceptBtn) {
+    e.stopPropagation();
+    const requestId = parseInt(acceptBtn.dataset.id);
+    if(!requestId) return;
+    try {
+      const r = await fetch('/api/friends/handle/', {method:'POST', headers:{'Content-Type':'application/json'}, credentials:'include', body: JSON.stringify({request_id: requestId, action: 'accept'})});
+      if(r.ok) {
+        showToast('已接受好友申请', 'success');
+        acceptBtn.closest('.notif-item')?.remove();
+      } else {
+        const d = await r.json();
+        showToast(d.detail || '操作失败', 'danger');
+      }
+    } catch(e){ showToast('操作失败', 'danger'); }
+    return;
+  }
+  // Reject friend request
+  const rejectBtn = e.target.closest('.notif-reject-friend');
+  if(rejectBtn) {
+    e.stopPropagation();
+    const requestId = parseInt(rejectBtn.dataset.id);
+    if(!requestId) return;
+    try {
+      const r = await fetch('/api/friends/handle/', {method:'POST', headers:{'Content-Type':'application/json'}, credentials:'include', body: JSON.stringify({request_id: requestId, action: 'reject'})});
+      if(r.ok) {
+        showToast('已拒绝好友申请');
+        rejectBtn.closest('.notif-item')?.remove();
+      }
+    } catch(e){ showToast('操作失败', 'danger'); }
+    return;
+  }
+
   const item = e.target.closest('.notif-item');
   if(!item) return;
   // Dismiss button
@@ -581,15 +616,10 @@ document.addEventListener('click', e => {
 // === Notification HTTP Polling (fallback, runs less frequently) ===
 async function pollGlobalNotifications(){
   try {
-    const [friendsRes, notifRes] = await Promise.all([
-      fetch('/api/friends/', {credentials:'include'}),
-      fetch('/api/notifications/', {credentials:'include'}),
-    ]);
-    const friendsData = await friendsRes.json();
-    const notifData = await notifRes.json();
-    const pendingCount = (friendsData.pending_requests || []).length;
+    const notifResp = await fetch('/api/notifications/', {credentials:'include'});
+    const notifData = await notifResp.json();
     const notifUnread = notifData.unread_count || 0;
-    const totalUnread = Math.max(pendingCount + notifUnread, _notifCount);
+    const totalUnread = Math.max(notifUnread, _notifCount);
     const badge = document.getElementById('notifBadge');
     if(totalUnread > 0){
       badge.textContent = totalUnread > 99 ? '99+' : totalUnread;
@@ -601,18 +631,6 @@ async function pollGlobalNotifications(){
     const notifList = document.getElementById('notifList');
     const notifCount = document.getElementById('notifCountLabel');
     let items = [];
-    (friendsData.pending_requests || []).slice(0, 5).forEach(r => {
-      items.push(`
-        <div class="notif-item" data-url="/friends/">
-          <span class="notif-dot"></span>
-          <div style="flex:1;min-width:0">
-            <div class="fw-medium" style="font-size:.82rem">好友申请</div>
-            <div class="muted" style="font-size:.75rem">${r.display_name || r.sender} 请求添加好友</div>
-          </div>
-          <a href="/friends/" class="btn btn-sm btn-outline-primary" style="border-radius:999px;font-size:.72rem;padding:2px 10px">处理</a>
-        </div>
-      `);
-    });
     (notifData.notifications || []).slice(0, 10).forEach(n => {
       const notifType = n.notif_type || n.type || '';
       const cfg = NOTIF_CONFIG[notifType] || NOTIF_CONFIG.system;
@@ -620,7 +638,7 @@ async function pollGlobalNotifications(){
       let linkUrl = actionUrl;
       if(!linkUrl) {
         if(notifType === 'new_message' || notifType === 'group_created' || notifType === 'group_invite') linkUrl = '/chat/?conv=' + (n.related_id || '');
-        if(notifType === 'task_assigned') linkUrl = '/dashboard/?task=' + (n.related_id || '');
+        if(notifType === 'friend_request' || notifType === 'friend_accepted') linkUrl = '/friends/';
       }
       items.push(`
         <div class="notif-item" data-url="${linkUrl}" data-nid="${n.id}">

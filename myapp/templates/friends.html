@@ -1,366 +1,244 @@
 {% extends 'base.html' %}
 {% load static %}
-{% block title %}好友与申请 - 星辰协同平台{% endblock %}
-{% block page_title %}好友与申请{% endblock %}
+{% block title %}好友管理 - 星辰协同平台{% endblock %}
+{% block page_title %}好友管理{% endblock %}
 
 {% block content %}
 <div class="app-content-header">
   <div class="container-fluid">
-    <div class="muted" style="font-size:.9rem">管理好友、处理好友申请、搜索添加新好友</div>
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+      <div class="muted" style="font-size:.88rem">管理好友与好友申请</div>
+    </div>
   </div>
 </div>
 <div class="app-content page-content">
-<div class="container-fluid" style="height:100%;display:flex;flex-direction:column">
+<div class="container-fluid" style="max-width:800px">
 
-  <!-- Stats -->
-  <div class="row g-3 mb-3">
-    <div class="col-md-4 col-6"><div class="card p-3 text-center border-0 shadow-sm"><div class="h4 mb-0 fw-bold" style="color:var(--brand)" id="friendCount">0</div><div class="muted small">好友</div></div></div>
-    <div class="col-md-4 col-6"><div class="card p-3 text-center border-0 shadow-sm"><div class="h4 mb-0 fw-bold" style="color:#f59e0b" id="pendingCount">0</div><div class="muted small">待处理申请</div></div></div>
-    <div class="col-md-4 col-6"><div class="card p-3 text-center border-0 shadow-sm"><div class="h4 mb-0 fw-bold" style="color:#22c55e" id="onlineCount">0</div><div class="muted small">在线好友</div></div></div>
-  </div>
+  <!-- Tabs -->
+  <ul class="nav nav-tabs border-0 mb-3" id="friendTabs" role="tablist">
+    <li class="nav-item" role="presentation">
+      <button class="nav-link active" id="friendsTab" data-bs-toggle="tab" data-bs-target="#friendsPanel" type="button">
+        <i class="bi bi-people me-1"></i>好友 <span class="badge rounded-pill text-bg-light" id="friendCount">0</span>
+      </button>
+    </li>
+    <li class="nav-item" role="presentation">
+      <button class="nav-link" id="pendingTab" data-bs-toggle="tab" data-bs-target="#pendingPanel" type="button">
+        <i class="bi bi-person-plus me-1"></i>申请 <span class="badge rounded-pill text-bg-danger" id="pendingCount">0</span>
+      </button>
+    </li>
+    <li class="nav-item" role="presentation">
+      <button class="nav-link" id="searchTab" data-bs-toggle="tab" data-bs-target="#searchPanel" type="button">
+        <i class="bi bi-search me-1"></i>搜索用户
+      </button>
+    </li>
+  </ul>
 
-  <div class="row g-3" style="flex:1;overflow:hidden">
-    <!-- Friend List -->
-    <div class="col-md-7 d-flex flex-column" style="height:100%">
-      <div class="card" style="flex:1;display:flex;flex-direction:column;overflow:hidden">
-        <div class="card-header d-flex align-items-center justify-content-between px-4 py-3">
-          <span class="fw-bold"><i class="bi bi-people me-2" style="color:var(--brand)"></i>好友列表</span>
-          <div class="d-flex gap-2">
-            <button class="btn btn-sm btn-outline-primary" onclick="createGroupFromFriends()" style="border-radius:999px" title="创建群聊">
-              <i class="bi bi-people-fill me-1"></i>创建群聊
-            </button>
-            <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#addFriendModal" style="border-radius:999px">
-              <i class="bi bi-person-plus me-1"></i>添加好友
-            </button>
-          </div>
+  <div class="tab-content">
+    <!-- Friends List -->
+    <div class="tab-pane fade show active" id="friendsPanel">
+      <div class="card" style="border-radius:12px">
+        <div class="card-body p-0" id="friendsList">
+          <div class="empty-state py-4"><i class="bi bi-people"></i><p>暂无好友</p></div>
         </div>
-        <div class="content-scroll p-2" id="friendList" style="flex:1"></div>
       </div>
     </div>
+
     <!-- Pending Requests -->
-    <div class="col-md-5 d-flex flex-column" style="height:100%">
-      <div class="card" style="flex:1;display:flex;flex-direction:column;overflow:hidden">
-        <div class="card-header d-flex align-items-center justify-content-between px-4 py-3">
-          <span class="fw-bold"><i class="bi bi-person-check me-2" style="color:#f59e0b"></i>好友申请</span>
-          <span class="badge rounded-pill text-bg-warning" id="pendingBadge">0</span>
+    <div class="tab-pane fade" id="pendingPanel">
+      <div class="card mb-3" style="border-radius:12px">
+        <div class="card-header bg-transparent"><strong><i class="bi bi-inbox me-1"></i>收到的申请</strong></div>
+        <div class="card-body p-0" id="incomingRequests">
+          <div class="empty-state py-3"><i class="bi bi-inbox"></i><p>暂无收到的申请</p></div>
         </div>
-        <div class="content-scroll p-2" id="requestList" style="flex:1"></div>
+      </div>
+      <div class="card" style="border-radius:12px">
+        <div class="card-header bg-transparent"><strong><i class="bi bi-send me-1"></i>已发送的申请</strong></div>
+        <div class="card-body p-0" id="sentRequests">
+          <div class="empty-state py-3"><i class="bi bi-send"></i><p>暂无已发送的申请</p></div>
+        </div>
       </div>
     </div>
-  </div>
-</div>
-</div>
 
-<!-- Add Friend Modal -->
-<div class="modal fade" id="addFriendModal" tabindex="-1">
-  <div class="modal-dialog modal-dialog-centered">
-    <div class="modal-content" style="border-radius:12px;border:none;box-shadow:0 20px 60px rgba(0,0,0,.15)">
-      <div class="modal-header border-0 pb-0">
-        <h5 class="fw-bold">添加好友</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-      </div>
-      <div class="modal-body">
-        <div class="mb-3">
-          <label class="form-label small fw-medium">搜索用户</label>
-          <div class="d-flex gap-2">
-            <input class="form-control" id="searchUserInput" placeholder="用户名或昵称搜索" style="border-radius:10px">
-            <button class="btn btn-primary" id="searchUserBtn" style="border-radius:10px"><i class="bi bi-search"></i></button>
+    <!-- Search Users -->
+    <div class="tab-pane fade" id="searchPanel">
+      <div class="card" style="border-radius:12px">
+        <div class="card-body">
+          <div class="input-group mb-3" style="border-radius:10px;overflow:hidden">
+            <input class="form-control" id="searchUserInput" placeholder="输入用户名搜索" style="border:none;padding:10px 14px">
+            <button class="btn btn-primary" id="searchUserBtn"><i class="bi bi-search"></i></button>
           </div>
-          <div id="searchResults" class="mt-2" style="max-height:240px;overflow-y:auto"></div>
-        </div>
-        <div class="mb-3" id="addRequestSection" style="display:none">
-          <label class="form-label small fw-medium">添加附言</label>
-          <input class="form-control" id="addMessage" placeholder="你好，加个好友" style="border-radius:10px">
-          <button class="btn btn-primary w-100 mt-2" id="sendFriendRequestBtn" style="border-radius:10px">发送好友申请</button>
+          <div id="searchResults"></div>
         </div>
       </div>
     </div>
   </div>
-</div>
 
-<!-- Create Group Modal -->
-<div class="modal fade" id="createGroupModal" tabindex="-1">
-  <div class="modal-dialog modal-dialog-centered">
-    <div class="modal-content" style="border-radius:12px;border:none;box-shadow:0 20px 60px rgba(0,0,0,.15)">
-      <div class="modal-header border-0 pb-0">
-        <h5 class="fw-bold">创建群聊</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-      </div>
-      <div class="modal-body">
-        <div class="mb-3">
-          <label class="form-label small fw-medium">群聊名称</label>
-          <input class="form-control" id="grpName" placeholder="输入群聊名称" style="border-radius:10px">
-        </div>
-        <div class="mb-3">
-          <label class="form-label small fw-medium">选择好友加入</label>
-          <div id="grpFriendSelection" style="max-height:300px;overflow-y:auto;border:1px solid var(--line);border-radius:10px;padding:8px"></div>
-        </div>
-      </div>
-      <div class="modal-footer border-0 pt-0">
-        <button class="btn btn-secondary" data-bs-dismiss="modal" style="border-radius:10px">取消</button>
-        <button class="btn btn-primary" id="createGroupConfirmBtn" style="border-radius:10px">创建群聊</button>
-      </div>
-    </div>
-  </div>
+</div>
 </div>
 {% endblock %}
 
 {% block extra_scripts %}
 <script>
-// ===== State =====
-let friends = [];
-let pendingRequests = [];
-let searchTargetUser = null;
+let currentUser = null;
 
-function statusLabel(s){
-  return {online:'在线', away:'忙碌', dnd:'勿扰', offline:'离线'}[s] || '离线';
-}
-
-// ===== Load =====
 async function loadFriends(){
   try {
     const r = await fetch('/api/friends/', {credentials:'include'});
     const data = await r.json();
-    friends = data.friends || [];
-    pendingRequests = data.pending_requests || [];
-    renderFriends();
-    renderRequests();
-    updateCounts();
+    const friends = data.friends || [];
+    document.getElementById('friendCount').textContent = friends.length;
+    const container = document.getElementById('friendsList');
+    if(!friends.length){
+      container.innerHTML = '<div class="empty-state py-4"><i class="bi bi-people"></i><p>暂无好友</p></div>';
+      return;
+    }
+    container.innerHTML = '';
+    friends.forEach(f => {
+      const d = document.createElement('div');
+      d.className = 'd-flex align-items-center gap-3 px-3 py-3 border-bottom';
+      d.style.transition = 'background .15s';
+      d.innerHTML = `
+        <img src="${f.avatar_url || '/static/avater.jpeg'}" class="avatar" onerror="this.src='/static/avater.jpeg'">
+        <div style="flex:1;min-width:0">
+          <div class="fw-medium">${f.display_name || f.username}</div>
+          <div class="muted small">${f.organization || ''}</div>
+        </div>
+        <span class="status-dot ${f.online_status || 'offline'}" title="${f.online_status === 'online' ? '在线' : f.online_status === 'away' ? '忙碌' : f.online_status === 'dnd' ? '请勿打扰' : '离线'}"></span>
+        <button class="btn btn-sm btn-outline-primary chat-friend-btn" data-id="${f.id}" style="border-radius:999px"><i class="bi bi-chat-dots"></i></button>
+      `;
+      container.appendChild(d);
+    });
+    container.querySelectorAll('.chat-friend-btn').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        const rid = parseInt(btn.dataset.id);
+        const r = await fetch('/api/conversations/create/', {method:'POST', headers:{'Content-Type':'application/json'}, credentials:'include', body: JSON.stringify({type:'direct', participant_ids:[rid]})});
+        const data = await r.json();
+        if(data.id) location.href = '/chat/?conv='+data.id;
+      });
+    });
   } catch(e){ console.error(e); }
 }
 
-function updateCounts(){
-  document.getElementById('friendCount').textContent = friends.length;
-  document.getElementById('pendingCount').textContent = pendingRequests.length;
-  document.getElementById('pendingBadge').textContent = pendingRequests.length;
-  document.getElementById('onlineCount').textContent = friends.filter(f => f.online_status === 'online').length;
+async function loadPendingRequests(){
+  try {
+    const r = await fetch('/api/friends/pending/', {credentials:'include'});
+    const data = await r.json();
+    const incoming = data.incoming || [];
+    const sent = data.sent || [];
+    document.getElementById('pendingCount').textContent = incoming.length;
+
+    // Incoming
+    const incomingContainer = document.getElementById('incomingRequests');
+    if(!incoming.length){
+      incomingContainer.innerHTML = '<div class="empty-state py-3"><i class="bi bi-inbox"></i><p>暂无收到的申请</p></div>';
+    } else {
+      incomingContainer.innerHTML = '';
+      incoming.forEach(fr => {
+        const d = document.createElement('div');
+        d.className = 'd-flex align-items-center gap-3 px-3 py-3 border-bottom';
+        d.innerHTML = `
+          <img src="${fr.avatar_url || '/static/avater.jpeg'}" class="avatar" onerror="this.src='/static/avater.jpeg'">
+          <div style="flex:1;min-width:0">
+            <div class="fw-medium">${fr.display_name || fr.sender}</div>
+            <div class="muted small">${new Date(fr.created_at).toLocaleString('zh-CN')}</div>
+          </div>
+          <button class="btn btn-sm btn-success accept-request-btn" data-id="${fr.id}" style="border-radius:999px"><i class="bi bi-check-lg"></i> 接受</button>
+          <button class="btn btn-sm btn-outline-secondary reject-request-btn" data-id="${fr.id}" style="border-radius:999px"><i class="bi bi-x"></i></button>
+        `;
+        incomingContainer.appendChild(d);
+      });
+      incomingContainer.querySelectorAll('.accept-request-btn').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          await fetch('/api/friends/handle/', {method:'POST', headers:{'Content-Type':'application/json'}, credentials:'include', body: JSON.stringify({request_id: parseInt(btn.dataset.id), action: 'accept'})});
+          showToast('已接受好友申请', 'success');
+          loadPendingRequests();
+          loadFriends();
+        });
+      });
+      incomingContainer.querySelectorAll('.reject-request-btn').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          await fetch('/api/friends/handle/', {method:'POST', headers:{'Content-Type':'application/json'}, credentials:'include', body: JSON.stringify({request_id: parseInt(btn.dataset.id), action: 'reject'})});
+          showToast('已拒绝好友申请');
+          loadPendingRequests();
+        });
+      });
+    }
+
+    // Sent
+    const sentContainer = document.getElementById('sentRequests');
+    if(!sent.length){
+      sentContainer.innerHTML = '<div class="empty-state py-3"><i class="bi bi-send"></i><p>暂无已发送的申请</p></div>';
+    } else {
+      sentContainer.innerHTML = '';
+      sent.forEach(fr => {
+        const d = document.createElement('div');
+        d.className = 'd-flex align-items-center gap-3 px-3 py-3 border-bottom';
+        d.innerHTML = `
+          <img src="${fr.avatar_url || '/static/avater.jpeg'}" class="avatar" onerror="this.src='/static/avater.jpeg'">
+          <div style="flex:1;min-width:0">
+            <div class="fw-medium">${fr.display_name || fr.receiver}</div>
+            <div class="muted small">${new Date(fr.created_at).toLocaleString('zh-CN')}</div>
+          </div>
+          <span class="badge rounded-pill text-bg-warning">等待中</span>
+        `;
+        sentContainer.appendChild(d);
+      });
+    }
+  } catch(e){ console.error(e); }
 }
 
-function renderFriends(){
-  const container = document.getElementById('friendList');
-  container.innerHTML = '';
-  if(!friends.length){
-    container.innerHTML = '<div class="empty-state small py-4"><i class="bi bi-people" style="font-size:2rem"></i><p class="mt-2">暂无好友，点击上方「添加好友」开始</p></div>';
-    return;
-  }
-  friends.sort((a,b) => a.display_name?.localeCompare?.(b.display_name) || 0);
-  friends.forEach(f => {
-    const div = document.createElement('div');
-    div.className = 'd-flex align-items-center justify-content-between p-2 rounded-3 mb-1';
-    div.style.cssText = 'transition:.15s;cursor:default';
-    div.onmouseover = () => { div.style.background = 'var(--brand-soft)'; };
-    div.onmouseout = () => { div.style.background = ''; };
-    div.innerHTML = `
-      <div class="d-flex align-items-center gap-2">
-        <div class="position-relative">
-          <img src="${f.avatar_url || '/static/avater.jpeg'}" class="avatar" onerror="this.src='/static/avater.jpeg'" alt="">
-          <span class="status-dot ${f.online_status || 'offline'}" style="position:absolute;bottom:0;right:0"></span>
-        </div>
-        <div>
-          <div class="fw-medium" style="font-size:.9rem">${f.display_name || f.username}</div>
-          <div class="muted" style="font-size:.75rem">${statusLabel(f.online_status)}${f.organization ? ' · ' + f.organization : ''}</div>
-        </div>
-      </div>
-      <div class="d-flex gap-1">
-        <button class="btn btn-sm btn-outline-primary chat-friend-btn" data-id="${f.id}" style="border-radius:999px;font-size:.75rem" title="发起私聊">
-          <i class="bi bi-chat-dots"></i>
-        </button>
-        <button class="btn btn-sm btn-outline-danger delete-friend-btn" data-id="${f.id}" style="border-radius:999px;font-size:.75rem" title="删除好友">
-          <i class="bi bi-person-x"></i>
-        </button>
-      </div>
-    `;
-    container.appendChild(div);
-  });
-  document.querySelectorAll('.chat-friend-btn').forEach(b => {
-    b.addEventListener('click', () => chatWithFriend(parseInt(b.dataset.id)));
-  });
-  document.querySelectorAll('.delete-friend-btn').forEach(b => {
-    b.addEventListener('click', () => deleteFriend(parseInt(b.dataset.id)));
-  });
-}
-
-function renderRequests(){
-  const container = document.getElementById('requestList');
-  container.innerHTML = '';
-  if(!pendingRequests.length){
-    container.innerHTML = '<div class="empty-state small py-4"><i class="bi bi-inbox" style="font-size:2rem"></i><p class="mt-2">暂无好友申请</p></div>';
-    return;
-  }
-  pendingRequests.forEach(r => {
-    const div = document.createElement('div');
-    div.className = 'p-3 rounded-3 mb-2 fade-in';
-    div.style.cssText = 'border:1px solid var(--line);background:#fff';
-    div.innerHTML = `
-      <div class="d-flex align-items-center gap-2 mb-2">
-        <img src="${r.avatar_url || '/static/avater.jpeg'}" class="avatar" onerror="this.src='/static/avater.jpeg'" alt="">
-        <div>
-          <div class="fw-medium">${r.display_name || r.sender}</div>
-          <div class="muted" style="font-size:.75rem">@${r.sender}</div>
-        </div>
-      </div>
-      ${r.message ? `<div class="muted small mb-2" style="padding:8px 12px;background:var(--soft);border-radius:8px">"${escapeHtml(r.message)}"</div>` : ''}
-      <div class="d-flex gap-2">
-        <button class="btn btn-sm btn-primary accept-request-btn flex-fill" data-id="${r.id}" style="border-radius:999px"><i class="bi bi-check-lg me-1"></i>同意</button>
-        <button class="btn btn-sm btn-outline-danger reject-request-btn flex-fill" data-id="${r.id}" style="border-radius:999px"><i class="bi bi-x-lg me-1"></i>拒绝</button>
-      </div>
-    `;
-    container.appendChild(div);
-  });
-  document.querySelectorAll('.accept-request-btn').forEach(b => {
-    b.addEventListener('click', () => handleRequest(b.dataset.id, 'accept'));
-  });
-  document.querySelectorAll('.reject-request-btn').forEach(b => {
-    b.addEventListener('click', () => handleRequest(b.dataset.id, 'reject'));
-  });
-}
-
-function escapeHtml(text){
-  const d = document.createElement('div');
-  d.textContent = text;
-  return d.innerHTML;
-}
-
-// ===== Handle Friend Requests =====
-async function handleRequest(requestId, action){
-  const r = await fetch(`/api/friends/requests/${requestId}/`, {
-    method:'POST', headers:{'Content-Type':'application/json'}, credentials:'include',
-    body: JSON.stringify({action})
-  });
-  if(!r.ok){ showToast('操作失败', 'danger'); return; }
-  showToast(action === 'accept' ? '已同意好友申请' : '已拒绝好友申请');
-  loadFriends();
-}
-
-// ===== Delete Friend =====
-async function deleteFriend(friendId){
-  if(!confirm('确定删除该好友？')) return;
-  const r = await fetch(`/api/friends/remove/${friendId}/`, {
-    method:'POST', credentials:'include'
-  });
-  if(!r.ok){ showToast('删除失败', 'danger'); return; }
-  showToast('好友已删除');
-  loadFriends();
-}
-
-// ===== Chat with Friend =====
-async function chatWithFriend(friendId){
-  const r = await fetch('/api/conversations/create/', {
-    method:'POST', headers:{'Content-Type':'application/json'}, credentials:'include',
-    body: JSON.stringify({type:'direct', participant_ids: [friendId]})
-  });
-  const data = await r.json();
-  if(data.id) location.href = '/chat/?conv=' + data.id;
-  else showToast('创建会话失败', 'danger');
-}
-
-// ===== Create Group from Friends =====
-async function createGroupFromFriends(){
-  // Render friend checkboxes in modal
-  const container = document.getElementById('grpFriendSelection');
-  container.innerHTML = '';
-  if(!friends.length){
-    container.innerHTML = '<div class="muted small text-center py-4">暂无好友可选</div>';
-    new bootstrap.Modal(document.getElementById('createGroupModal')).show();
-    return;
-  }
-  friends.forEach(f => {
-    const d = document.createElement('div');
-    d.className = 'd-flex align-items-center gap-2 p-2 rounded-2';
-    d.style.cssText = 'transition:.1s;cursor:pointer';
-    d.onmouseover = () => { d.style.background = 'var(--soft)'; };
-    d.onmouseout = () => { d.style.background = ''; };
-    d.innerHTML = `
-      <input type="checkbox" class="grp-member-cb" value="${f.id}" style="accent-color:var(--brand);width:16px;height:16px">
-      <img src="${f.avatar_url || '/static/avater.jpeg'}" class="avatar-sm" onerror="this.src='/static/avater.jpeg'" alt="">
-      <div style="flex:1;font-size:.85rem">${f.display_name || f.username}</div>
-      <span class="muted" style="font-size:.72rem">${statusLabel(f.online_status)}</span>
-    `;
-    container.appendChild(d);
-  });
-  new bootstrap.Modal(document.getElementById('createGroupModal')).show();
-}
-
-document.getElementById('createGroupConfirmBtn').addEventListener('click', async () => {
-  const name = document.getElementById('grpName').value.trim() || ('群聊-' + Date.now().toString(36));
-  const checked = document.querySelectorAll('.grp-member-cb:checked');
-  const ids = Array.from(checked).map(cb => parseInt(cb.value));
-  if(!ids.length){ showToast('请选择至少一位好友', 'warning'); return; }
-
-  const r = await fetch('/api/conversations/create/', {
-    method:'POST', headers:{'Content-Type':'application/json'}, credentials:'include',
-    body: JSON.stringify({type:'group', title: name, participant_ids: ids})
-  });
-  const data = await r.json();
-  if(!r.ok){ showToast('创建失败', 'danger'); return; }
-  showToast('群聊创建成功');
-  bootstrap.Modal.getInstance(document.getElementById('createGroupModal')).hide();
-  location.href = '/chat/?conv=' + data.id;
-});
-
-// ===== Search Users =====
-document.getElementById('searchUserBtn').addEventListener('click', async () => {
+async function searchUsers(){
   const q = document.getElementById('searchUserInput').value.trim();
-  if(!q) return;
-  const r = await fetch(`/api/users/search/?q=${encodeURIComponent(q)}`, {credentials:'include'});
-  const data = await r.json();
-  const container = document.getElementById('searchResults');
-  container.innerHTML = '';
-  const users = data.users || [];
-  if(!users.length){
-    container.innerHTML = '<div class="muted small p-2">未找到用户</div>';
-    return;
-  }
-  users.forEach(u => {
-    const d = document.createElement('div');
-    d.className = 'd-flex align-items-center justify-content-between p-2 rounded-3 mb-1';
-    d.style.cssText = 'border:1px solid var(--line);background:#fff;cursor:pointer';
-    d.innerHTML = `
-      <div class="d-flex align-items-center gap-2">
-        <img src="${u.avatar_url || '/static/avater.jpeg'}" class="avatar-sm" onerror="this.src='/static/avater.jpeg'" alt="">
-        <div>
-          <div class="fw-medium" style="font-size:.9rem">${u.display_name || u.username}</div>
-          <div class="muted" style="font-size:.75rem">@${u.username}${u.organization ? ' · ' + u.organization : ''}</div>
+  if(!q || q.length < 1) return;
+  try {
+    const r = await fetch(`/api/users/search/?q=${encodeURIComponent(q)}`, {credentials:'include'});
+    const data = await r.json();
+    const users = data.users || [];
+    const container = document.getElementById('searchResults');
+    if(!users.length){
+      container.innerHTML = '<div class="empty-state py-3"><i class="bi bi-search"></i><p>未找到用户</p></div>';
+      return;
+    }
+    container.innerHTML = '';
+    users.forEach(u => {
+      const d = document.createElement('div');
+      d.className = 'd-flex align-items-center gap-3 px-3 py-3 border-bottom';
+      d.innerHTML = `
+        <img src="${u.avatar_url || '/static/avater.jpeg'}" class="avatar" onerror="this.src='/static/avater.jpeg'">
+        <div style="flex:1;min-width:0">
+          <div class="fw-medium">${u.display_name || u.username}</div>
+          <div class="muted small">${u.organization || ''}</div>
         </div>
-      </div>
-      <span class="badge rounded-pill text-bg-secondary">选择</span>
-    `;
-    d.addEventListener('click', () => {
-      searchTargetUser = u;
-      document.getElementById('addRequestSection').style.display = 'block';
-      document.getElementById('addRequestSection').querySelector('label').textContent = `向 ${u.display_name || u.username} 发送申请`;
-      container.querySelectorAll('.rounded-3').forEach(el => el.style.borderColor = 'var(--line)');
-      d.style.borderColor = 'var(--brand)';
+        <button class="btn btn-sm btn-outline-primary add-friend-btn" data-id="${u.id}" style="border-radius:999px"><i class="bi bi-person-plus"></i> 加好友</button>
+      `;
+      container.appendChild(d);
     });
-    container.appendChild(d);
+    container.querySelectorAll('.add-friend-btn').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const r = await fetch('/api/friends/request/', {method:'POST', headers:{'Content-Type':'application/json'}, credentials:'include', body: JSON.stringify({receiver_id: parseInt(btn.dataset.id)})});
+        const data = await r.json();
+        if(r.ok){
+          showToast(data.detail || '好友申请已发送', 'success');
+          btn.disabled = true;
+          btn.textContent = '已发送';
+          btn.className = 'btn btn-sm btn-outline-secondary';
+        } else {
+          showToast(data.detail || '操作失败', 'danger');
+        }
+      });
+    });
+  } catch(e){ console.error(e); }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  loadFriends();
+  loadPendingRequests();
+
+  document.getElementById('searchUserBtn').addEventListener('click', searchUsers);
+  document.getElementById('searchUserInput').addEventListener('keydown', e => {
+    if(e.key === 'Enter') searchUsers();
   });
 });
-
-document.getElementById('sendFriendRequestBtn').addEventListener('click', async () => {
-  if(!searchTargetUser){ showToast('请先搜索并选择用户', 'warning'); return; }
-  const msg = document.getElementById('addMessage').value.trim();
-  const r = await fetch('/api/friends/add/', {
-    method:'POST', headers:{'Content-Type':'application/json'}, credentials:'include',
-    body: JSON.stringify({username: searchTargetUser.username, message: msg})
-  });
-  const data = await r.json();
-  if(!r.ok){ showToast(data.detail || '发送失败', 'danger'); return; }
-  showToast('好友申请已发送');
-  bootstrap.Modal.getInstance(document.getElementById('addFriendModal')).hide();
-  document.getElementById('searchUserInput').value = '';
-  document.getElementById('addMessage').value = '';
-  document.getElementById('searchResults').innerHTML = '';
-  document.getElementById('addRequestSection').style.display = 'none';
-  searchTargetUser = null;
-});
-
-document.getElementById('addFriendModal').addEventListener('hidden.bs.modal', () => {
-  document.getElementById('searchResults').innerHTML = '';
-  document.getElementById('addRequestSection').style.display = 'none';
-  searchTargetUser = null;
-});
-
-// ===== Init =====
-document.addEventListener('DOMContentLoaded', loadFriends);
 </script>
 {% endblock %}

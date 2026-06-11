@@ -10,7 +10,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 
 from .models import Conversation, ConversationMember, ConversationReadState, Message
-from myapp.members.models import User, Friendship, FriendRequest
+from myapp.members.models import User
 
 
 @login_required
@@ -129,6 +129,13 @@ def create_conversation_view(request):
             conversation=conv, user=u,
             defaults={'role': 'admin' if u == request.user else 'member'}
         )
+    if ctype == 'group':
+        # Notify all added members
+        from myapp.notify import notify_group_invite
+        sender_name = request.user.display_name or request.user.username
+        for u in participants:
+            if u != request.user:
+                notify_group_invite(u.id, conv.id, title or '群聊', sender_name)
     if ctype == 'direct' and len(participants) == 2 and not title:
         peer = [p for p in participants if p != request.user][0]
         conv.title = peer.display_name or peer.username
@@ -310,6 +317,9 @@ def conversation_member_manage_view(request, conversation_id):
     if action == 'invite':
         conv.participants.add(target)
         ConversationMember.objects.get_or_create(conversation=conv, user=target)
+        from myapp.notify import notify_group_invite
+        sender_name = request.user.display_name or request.user.username
+        notify_group_invite(target.id, conv.id, conv.title or '群聊', sender_name)
         return JsonResponse({'detail': 'invited'})
     if action == 'remove':
         if conv.created_by != request.user:

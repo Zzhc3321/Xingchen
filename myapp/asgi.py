@@ -1,8 +1,10 @@
 import os
 
-import pymysql
-
-pymysql.install_as_MySQLdb()
+try:
+    import pymysql
+    pymysql.install_as_MySQLdb()
+except ImportError:
+    pass
 
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'myapp.settings')
 

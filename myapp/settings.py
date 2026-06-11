@@ -20,7 +20,6 @@ INSTALLED_APPS = [
     'myapp',
     'myapp.members',
     'myapp.chat',
-    'myapp.events',
 ]
 
 MIDDLEWARE = [
@@ -54,13 +53,8 @@ TEMPLATES = [
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'myweb',
-        'USER': 'myweb',
-        'PASSWORD': 'NhknwSe8eMjYsX58',
-        'HOST': '127.0.0.1',
-        'PORT': '3306',
-        'OPTIONS': {'charset': 'utf8mb4'},
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': BASE_DIR / 'db.sqlite3',
     }
 }
 
@@ -77,13 +71,10 @@ AUTH_USER_MODEL = 'members.User'
 AUTHENTICATION_BACKENDS = ['myapp.members.auth_backend.PhoneOrUsernameModelBackend']
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
-REDIS_URL = 'redis://127.0.0.1:6379/0'
+REDIS_URL = ''
 CHANNEL_LAYERS = {
     'default': {
-        'BACKEND': 'channels_redis.core.RedisChannelLayer',
-        'CONFIG': {
-            'hosts': [{'address': 'redis://127.0.0.1:6379/0', 'socket_timeout': None}],
-        },
+        'BACKEND': 'channels.layers.InMemoryChannelLayer',
     },
 }
 LOGIN_URL = '/auth/login/'
