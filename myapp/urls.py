@@ -2,7 +2,7 @@ from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib import admin
 from django.urls import include, path
-from myapp.views import dashboard_view, chat_page, friends_page, profile_page, events_page, login_page, register_page, api_announcements
+from myapp.views import dashboard_view, dashboard_data_view, chat_page, friends_page, profile_page, events_page, login_page, register_page, api_announcements
 from myapp.views import materials_page, api_materials_list, api_materials_save, api_materials_pdf, api_materials_delete, api_materials_rename, api_materials_edit, api_materials_batch_delete, api_materials_toggle_pin, api_materials_export
 from myapp.chat.views import app_home
 from myapp.report_views import generate_report_view, stats_view
@@ -13,6 +13,7 @@ urlpatterns = [
     path('auth/login/', login_page, name='login-page'),
     path('auth/register/', register_page, name='register-page'),
     path('dashboard/', dashboard_view, name='dashboard'),
+    path('dashboard/data/', dashboard_data_view, name='dashboard-data'),
     path('app/', app_home, name='app-home'),
     path('chat/', chat_page, name='chat'),
     path('friends/', friends_page, name='friends'),

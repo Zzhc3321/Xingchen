@@ -20,6 +20,11 @@ def dashboard_view(request):
 
 
 @login_required
+def dashboard_data_view(request):
+    return _render(request, 'dashboard_data.html', 'dashboard_data')
+
+
+@login_required
 def chat_page(request):
     return _render(request, 'chat.html', 'chat')
 

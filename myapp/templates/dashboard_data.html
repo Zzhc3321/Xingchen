@@ -1,0 +1,524 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}数据看板 - 星辰协同平台{% endblock %}
+{% block page_title %}数据看板{% endblock %}
+
+{% block extra_head %}
+<script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/echarts-gl@2.0.9/dist/echarts-gl.min.js"></script>
+<style>
+/* ===== Data Dashboard Layout ===== */
+.dboard-wrap {
+  position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+  z-index: 1040; overflow-y: auto;
+  background: #0b0f1a;
+  padding: 0;
+  margin-left: 0;
+}
+.dboard-wrap .container-fluid { max-width: 1600px; margin: 0 auto; padding: 20px 24px 40px; }
+
+.dboard-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 16px 0 20px; margin-bottom: 20px;
+  border-bottom: 1px solid rgba(255,255,255,.06);
+}
+.dboard-header h1 {
+  font-size: 1.4rem; font-weight: 700; margin: 0;
+  background: linear-gradient(135deg, #60a5fa, #a78bfa);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.dboard-header .time-badge { color: rgba(255,255,255,.5); font-size: .82rem; }
+.dboard-header .close-btn {
+  background: rgba(255,255,255,.08); border: none; color: rgba(255,255,255,.6);
+  border-radius: 10px; padding: 8px 18px; font-size: .85rem; cursor: pointer;
+  transition: .2s; text-decoration: none;
+}
+.dboard-header .close-btn:hover { background: rgba(255,255,255,.14); color: #fff; }
+
+/* Grid */
+.dboard-grid {
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  gap: 16px;
+}
+
+/* Chart Cards */
+.dboard-card {
+  background: rgba(255,255,255,.04);
+  border: 1px solid rgba(255,255,255,.08);
+  border-radius: 16px;
+  padding: 0;
+  backdrop-filter: blur(10px);
+  overflow: hidden;
+  transition: border-color .3s;
+}
+.dboard-card:hover { border-color: rgba(255,255,255,.16); }
+.dboard-card-header {
+  padding: 14px 20px 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.dboard-card-header h3 {
+  font-size: .85rem; font-weight: 600; color: rgba(255,255,255,.7); margin: 0;
+  letter-spacing: .3px;
+}
+.dboard-card-header .card-badge {
+  font-size: .7rem; padding: 2px 10px; border-radius: 999px;
+  background: rgba(255,255,255,.06); color: rgba(255,255,255,.4);
+}
+.dboard-chart { width: 100%; height: 100%; min-height: 280px; }
+.dboard-chart-sm { min-height: 180px; }
+.dboard-chart-lg { min-height: 360px; }
+.dboard-chart-xl { min-height: 420px; }
+
+/* Stat chips */
+.stat-chips { display: flex; gap: 10px; flex-wrap: wrap; padding: 0 20px 14px; }
+.stat-chip {
+  background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.06);
+  border-radius: 10px; padding: 8px 16px; flex: 1; min-width: 100px;
+}
+.stat-chip .chip-value { font-size: 1.3rem; font-weight: 700; color: #fff; }
+.stat-chip .chip-label { font-size: .72rem; color: rgba(255,255,255,.45); margin-top: 2px; }
+
+/* Spans */
+.col-3 { grid-column: span 3; }
+.col-4 { grid-column: span 4; }
+.col-5 { grid-column: span 5; }
+.col-6 { grid-column: span 6; }
+.col-7 { grid-column: span 7; }
+.col-8 { grid-column: span 8; }
+.col-9 { grid-column: span 9; }
+.col-12 { grid-column: span 12; }
+
+/* Pulse dot */
+.pulse-dot {
+  display: inline-block; width: 8px; height: 8px; border-radius: 50%;
+  background: #22c55e; margin-right: 6px;
+  animation: pulse 2s infinite;
+}
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: .3; }
+}
+
+/* Loading */
+.dboard-loading {
+  position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+  background: #0b0f1a; display: flex; align-items: center; justify-content: center;
+  z-index: 9999;
+}
+.dboard-loading .spinner { width: 48px; height: 48px; border: 3px solid rgba(255,255,255,.08); border-top-color: #60a5fa; border-radius: 50%; animation: spin .8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="dboard-wrap" id="dboardWrap">
+  <div class="container-fluid">
+    <!-- Header -->
+    <div class="dboard-header">
+      <div>
+        <h1><i class="bi bi-bar-chart-steps me-2"></i>数据看板</h1>
+        <div class="time-badge mt-1"><span class="pulse-dot"></span><span id="liveTime">加载中...</span></div>
+      </div>
+      <div>
+        <a href="/dashboard/" class="close-btn"><i class="bi bi-layout-wtf me-1"></i>工作台</a>
+      </div>
+    </div>
+
+    <!-- Loading -->
+    <div class="dboard-loading" id="loadingOverlay"><div class="spinner"></div></div>
+
+    <!-- Grid -->
+    <div class="dboard-grid" id="dboardGrid" style="opacity:0;transition:opacity .6s">
+
+      <!-- Row 1: Stat Chips -->
+      <div class="col-12 dboard-card" style="padding:0">
+        <div class="stat-chips" id="statChips">
+          <div class="stat-chip"><div class="chip-value" id="chipEvents">-</div><div class="chip-label">事件总数</div></div>
+          <div class="stat-chip"><div class="chip-value" id="chipTasks">-</div><div class="chip-label">任务总数</div></div>
+          <div class="stat-chip"><div class="chip-value" id="chipConvs">-</div><div class="chip-label">会话数</div></div>
+          <div class="stat-chip"><div class="chip-value" id="chipFriends">-</div><div class="chip-label">好友数</div></div>
+          <div class="stat-chip"><div class="chip-value" id="chipMsgs">-</div><div class="chip-label">近7日消息</div></div>
+        </div>
+      </div>
+
+      <!-- Chart 1: 3D Event Category Bar -->
+      <div class="col-7 dboard-card">
+        <div class="dboard-card-header">
+          <h3><i class="bi bi-bar-chart-fill me-1" style="color:#60a5fa"></i>事件分类 3D 概览</h3>
+          <span class="card-badge">3D Bar</span>
+        </div>
+        <div class="dboard-chart dboard-chart-xl" id="chart3DBar"></div>
+      </div>
+
+      <!-- Chart 2: Gauge - Task Completion -->
+      <div class="col-5 dboard-card">
+        <div class="dboard-card-header">
+          <h3><i class="bi bi-speedometer2 me-1" style="color:#34d399"></i>完成任务率</h3>
+          <span class="card-badge">Gauge</span>
+        </div>
+        <div class="dboard-chart dboard-chart-xl" id="chartGauge"></div>
+      </div>
+
+      <!-- Chart 3: Line - 7-Day Trend -->
+      <div class="col-8 dboard-card">
+        <div class="dboard-card-header">
+          <h3><i class="bi bi-graph-up me-1" style="color:#f59e0b"></i>事件趋势</h3>
+          <span class="card-badge">7 Days</span>
+        </div>
+        <div class="dboard-chart dboard-chart-lg" id="chartTrend"></div>
+      </div>
+
+      <!-- Chart 4: Pie - Event Distribution -->
+      <div class="col-4 dboard-card">
+        <div class="dboard-card-header">
+          <h3><i class="bi bi-pie-chart me-1" style="color:#a78bfa"></i>事件分布</h3>
+          <span class="card-badge">Pie</span>
+        </div>
+        <div class="dboard-chart dboard-chart-lg" id="chartPie"></div>
+      </div>
+
+      <!-- Chart 5: Calendar Heatmap -->
+      <div class="col-6 dboard-card">
+        <div class="dboard-card-header">
+          <h3><i class="bi bi-calendar3 me-1" style="color:#f472b6"></i>月度活动热力图</h3>
+          <span class="card-badge">Heatmap</span>
+        </div>
+        <div class="dboard-chart dboard-chart-lg" id="chartHeatmap"></div>
+      </div>
+
+      <!-- Chart 6: Graph - Collaboration Network -->
+      <div class="col-6 dboard-card">
+        <div class="dboard-card-header">
+          <h3><i class="bi bi-diagram-3 me-1" style="color:#2dd4bf"></i>协作关系网络</h3>
+          <span class="card-badge">Graph</span>
+        </div>
+        <div class="dboard-chart dboard-chart-lg" id="chartGraph"></div>
+      </div>
+
+      <!-- Chart 7: 3D Scatter - Priority vs Category -->
+      <div class="col-12 dboard-card">
+        <div class="dboard-card-header">
+          <h3><i class="bi bi-brightness-high me-1" style="color:#fb923c"></i>优先级 × 分类 3D 散点</h3>
+          <span class="card-badge">3D Scatter</span>
+        </div>
+        <div class="dboard-chart dboard-chart-xl" id="chart3DScatter" style="min-height:400px"></div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+// ===== Live Clock =====
+function updateClock(){
+  const now = new Date();
+  const s = now.toLocaleString('zh-CN', {timeZone:'Asia/Shanghai', hour12:false});
+  document.getElementById('liveTime').textContent = '实时 · ' + s;
+}
+setInterval(updateClock, 1000);
+updateClock();
+
+// ===== Color Palette =====
+const palette = ['#60a5fa','#34d399','#f59e0b','#a78bfa','#f472b6','#fb923c','#2dd4bf','#f87171'];
+const darkBg = '#0b0f1a';
+const darkCard = 'rgba(255,255,255,.04)';
+const darkBorder = 'rgba(255,255,255,.08)';
+const darkText = 'rgba(255,255,255,.7)';
+const axisStyle = { axisLine: {lineStyle:{color:'rgba(255,255,255,.1)'}}, axisTick: {lineStyle:{color:'rgba(255,255,255,.1)'}}, axisLabel: {color:'rgba(255,255,255,.4)'}, splitLine: {lineStyle:{color:'rgba(255,255,255,.06)'}} };
+
+// ===== Resize Observer =====
+const resizeObs = new ResizeObserver(entries => {
+  entries.forEach(e => {
+    const chart = e.target.__chart;
+    if(chart) chart.resize();
+  });
+});
+
+function mountChart(el, chart) {
+  el.__chart = chart;
+  resizeObs.observe(el);
+}
+
+// ===== Render All Charts =====
+async function initDashboard(){
+  try {
+    const [evRes, taskRes, convRes, friendRes] = await Promise.all([
+      fetch('/api/events/', {credentials:'include'}).then(r=>r.json()),
+      fetch('/api/tasks/', {credentials:'include'}).then(r=>r.json()),
+      fetch('/api/conversations/', {credentials:'include'}).then(r=>r.json()),
+      fetch('/api/friends/', {credentials:'include'}).then(r=>r.json()),
+    ]);
+
+    const ev = evRes.events || [];
+    const counts = evRes.counts || {};
+    const tasks = taskRes.tasks || [];
+    const convs = convRes.conversations || [];
+    const friendsData = friendRes.friends || [];
+
+    // Stats chips
+    const totalEv = Object.values(counts).reduce((a,b)=>a+b, 0);
+    document.getElementById('chipEvents').textContent = totalEv;
+    document.getElementById('chipTasks').textContent = tasks.length;
+    document.getElementById('chipConvs').textContent = convs.length;
+    document.getElementById('chipFriends').textContent = friendsData.length;
+    // Msg count — sum up unread from convs
+    const totalUnread = convs.reduce((s,c) => s + (c.unread_count || 0), 0);
+    document.getElementById('chipMsgs').textContent = totalUnread + ' 未读';
+
+    // 🔹 Chart 1: 3D Bar - Event Category
+    (function(){
+      const catMap = {pre_sales:'售前', in_sales:'售中', after_sales:'售后', custom:'自定义'};
+      const cats = ['pre_sales','in_sales','after_sales','custom'];
+      const data = cats.map((c,i) => [i, 0, counts[c] || 0]);
+      const maxVal = Math.max(...data.map(d=>d[2]), 1);
+
+      const chart = echarts.init(document.getElementById('chart3DBar'));
+      chart.setOption({
+        tooltip: {},
+        backgroundColor: 'transparent',
+        grid3D: {
+          boxWidth: 80, boxHeight: 40, boxDepth: 60,
+          viewControl: { alpha: 20, beta: 30, distance: 180, autoRotate: true, autoRotateSpeed: 5 },
+          light: { main: { intensity: 1.2 }, ambient: { intensity: .4 } },
+          postEffect: { enable: true, SSAO: { enable: true, quality: 'low' } },
+          axisPointer: { show: false },
+        },
+        xAxis3D: { type: 'category', data: cats.map(c=>catMap[c]), ...axisStyle },
+        yAxis3D: { type: 'value', ...axisStyle, name: '数量', nameTextStyle: {color: 'rgba(255,255,255,.4)'} },
+        zAxis3D: { type: 'category', data: [''], ...axisStyle },
+        series: [{
+          type: 'bar3D',
+          data: data,
+          shading: 'lambert',
+          barSize: 0.6,
+          label: { show: true, textStyle: {color:'#fff',fontSize:12}, formatter: p => p.data[2] || '' },
+          itemStyle: { color: p => palette[p.data[0] % palette.length], opacity: .85 },
+          emphasis: { label: {fontSize:14,fontWeight:'bold'}, itemStyle: {opacity:1} },
+        }]
+      });
+      mountChart(document.getElementById('chart3DBar'), chart);
+    })();
+
+    // 🔹 Chart 2: Gauge
+    (function(){
+      const total = tasks.length || 1;
+      const done = tasks.filter(t => t.status === 'completed').length;
+      const pct = Math.round(done/total*100);
+      const chart = echarts.init(document.getElementById('chartGauge'));
+      chart.setOption({
+        backgroundColor: 'transparent',
+        series: [{
+          type: 'gauge',
+          startAngle: 210, endAngle: -30,
+          center: ['50%', '55%'], radius: '80%',
+          min: 0, max: 100,
+          axisLine: { lineStyle: { width: 18, color: [[0,'rgba(255,255,255,.06)'],[pct/100,'#34d399'],[1,'rgba(255,255,255,.06)']] } },
+          axisTick: { show: false },
+          splitLine: { show: false },
+          axisLabel: { show: false },
+          pointer: { show: false },
+          anchor: { show: false },
+          title: { show: true, offsetCenter: [0, '30%'], fontSize: 13, color: 'rgba(255,255,255,.5)' },
+          detail: {
+            valueAnimation: true,
+            formatter: '{value}%',
+            color: '#34d399', fontSize: 36, fontWeight: 700,
+            offsetCenter: [0, '10%'],
+          },
+          data: [{ value: pct, name: '完成任务率' }],
+        }]
+      });
+      mountChart(document.getElementById('chartGauge'), chart);
+    })();
+
+    // 🔹 Chart 3: Line - 7 Day Trend
+    (function(){
+      const days = [];
+      for(let i=6; i>=0; i--){ const d=new Date(); d.setDate(d.getDate()-i); days.push(d.toISOString().slice(0,10)); }
+      const countsByDay = {};
+      ev.forEach(e => { const d = (e.created_at||'').slice(0,10); if(d) countsByDay[d] = (countsByDay[d]||0)+1; });
+      const data = days.map(d => countsByDay[d] || 0);
+      const chart = echarts.init(document.getElementById('chartTrend'));
+      chart.setOption({
+        backgroundColor: 'transparent',
+        tooltip: { trigger: 'axis', backgroundColor: 'rgba(0,0,0,.7)', borderColor: 'transparent', textStyle: {color:'#fff'} },
+        grid: { left: '6%', right: '6%', bottom: '12%', top: '10%' },
+        xAxis: { type: 'category', data: days.map(d=>d.slice(5)), ...axisStyle,
+          axisLabel: { color:'rgba(255,255,255,.4)', fontSize:10 } },
+        yAxis: { type: 'value', ...axisStyle, minInterval: 1 },
+        series: [{
+          type: 'line', smooth: true, symbol: 'circle', symbolSize: 8,
+          data, lineStyle: { width: 3, color: '#f59e0b' },
+          areaStyle: { color: { type: 'linear', x: 0, y: 0, x2: 0, y2: 1,
+            colorStops: [{offset:0,color:'rgba(245,158,11,.35)'},{offset:1,color:'rgba(245,158,11,0)'}] } },
+          itemStyle: { color: '#f59e0b', borderWidth: 2, borderColor: '#0b0f1a' },
+          markLine: { data: [{ type: 'average', name: '均值' }],
+            lineStyle: { color: 'rgba(255,255,255,.2)', type: 'dashed' },
+            label: { color: 'rgba(255,255,255,.4)', fontSize: 10 } },
+          markPoint: { data: [{ type: 'max', name: '峰值' },{ type: 'min', name: '谷值' }],
+            symbolSize: 40, itemStyle: { color: '#f59e0b' }, label: { color: '#fff', fontSize: 9 } },
+        }]
+      });
+      mountChart(document.getElementById('chartTrend'), chart);
+    })();
+
+    // 🔹 Chart 4: Pie - Event Distribution
+    (function(){
+      const catMap = {pre_sales:'售前', in_sales:'售中', after_sales:'售后', custom:'自定义'};
+      const cats = ['pre_sales','in_sales','after_sales','custom'];
+      const data = cats.filter(c=>counts[c]).map((c,i) => ({value:counts[c], name:catMap[c], itemStyle:{color:palette[i]}}));
+      if(!data.length) data.push({value:1, name:'暂无数据', itemStyle:{color:'rgba(255,255,255,.1)'}});
+      const chart = echarts.init(document.getElementById('chartPie'));
+      chart.setOption({
+        backgroundColor: 'transparent',
+        tooltip: { trigger: 'item', formatter: '{b}: {c} ({d}%)', backgroundColor: 'rgba(0,0,0,.7)', borderColor: 'transparent', textStyle:{color:'#fff'} },
+        series: [{
+          type: 'pie', radius: ['35%', '65%'], center: ['50%', '52%'],
+          roseType: 'radius',
+          label: { color: 'rgba(255,255,255,.7)', fontSize: 11 },
+          labelLine: { lineStyle: { color: 'rgba(255,255,255,.15)' } },
+          animationType: 'scale',
+          emphasis: { scale: true, label: { fontSize: 13, fontWeight: 'bold' } },
+          data,
+        }]
+      });
+      mountChart(document.getElementById('chartPie'), chart);
+    })();
+
+    // 🔹 Chart 5: Calendar Heatmap (simplified - 7x5 grid)
+    (function(){
+      const now = new Date();
+      const y = now.getFullYear(), m = now.getMonth();
+      const daysInMonth = new Date(y, m+1, 0).getDate();
+      const firstDay = new Date(y, m, 1).getDay();
+      const cellSize = 28;
+
+      // Build heat data
+      const heatData = [];
+      const evByDay = {};
+      ev.forEach(e => { const d = (e.created_at||'').slice(0,10); if(d) evByDay[d] = (evByDay[d]||0)+1; });
+      for(let d=1; d<=daysInMonth; d++){
+        const ds = `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+        const val = evByDay[ds] || 0;
+        const row = Math.floor((d + firstDay - 1) / 7);
+        const col = (d + firstDay - 1) % 7;
+        heatData.push([col, row, val]);
+      }
+      const rows = Math.ceil((daysInMonth + firstDay) / 7);
+      const weekDays = ['日','一','二','三','四','五','六'];
+
+      const chart = echarts.init(document.getElementById('chartHeatmap'));
+      chart.setOption({
+        backgroundColor: 'transparent',
+        tooltip: { position: 'top', backgroundColor:'rgba(0,0,0,.8)', borderColor:'transparent', textStyle:{color:'#fff',fontSize:11},
+          formatter: p => `${p.data[1]+1}月${p.data[0]+1}日 · 事件 ${p.data[2]} 条` },
+        grid: { left: '8%', right: '4%', top: '8%', bottom: '8%' },
+        xAxis: { type: 'category', data: weekDays, position: 'top', ...axisStyle,
+          axisLabel: {color:'rgba(255,255,255,.4)',fontSize:9},
+          splitArea: { show: true, areaStyle: { color: ['rgba(255,255,255,.02)', 'rgba(255,255,255,.01)'] } } },
+        yAxis: { type: 'category', data: Array.from({length:rows},(_,i)=>`${i+1}`), ...axisStyle,
+          axisLabel: {show:false} },
+        visualMap: { min: 0, max: Math.max(...heatData.map(d=>d[2]), 3), calculable: true,
+          orient: 'horizontal', left: 'center', bottom: 0,
+          inRange: { color: ['rgba(255,255,255,.04)','rgba(96,165,250,.3)','rgba(96,165,250,.6)','#60a5fa'] },
+          textStyle: { color: 'rgba(255,255,255,.4)' } },
+        series: [{ type: 'heatmap', data: heatData,
+          label: { show: true, color: 'rgba(255,255,255,.6)', fontSize: 9, formatter: p => {
+            const day = p.data[0] + 1 + p.data[1] * 7 - firstDay + 1;
+            return day > 0 && day <= daysInMonth ? day : '';
+          } },
+          itemStyle: { borderWidth: 2, borderColor: 'transparent', borderRadius: 3 },
+          emphasis: { itemStyle: { borderColor: '#fff', borderWidth: 1 } },
+        }]
+      });
+      mountChart(document.getElementById('chartHeatmap'), chart);
+    })();
+
+    // 🔹 Chart 6: Graph - Collaboration Network
+    (function(){
+      const convNodes = convs.slice(0, 15);
+      const nodes = [{id:'me', name:'我', symbolSize:40, itemStyle:{color:'#60a5fa'}}];
+      const links = [];
+      const added = new Set();
+      convNodes.forEach(c => {
+        const nid = 'conv_'+c.id;
+        if(!added.has(nid)){
+          added.add(nid);
+          const isGroup = c.type === 'group';
+          nodes.push({id:nid, name:c.title||(isGroup?'群聊':'私聊'), symbolSize: isGroup ? 28 : 20,
+            itemStyle:{color: isGroup ? '#a78bfa' : '#34d399'}});
+          links.push({source:'me', target:nid, lineStyle:{color:'rgba(255,255,255,.12)',width:1}});
+        }
+      });
+      const chart = echarts.init(document.getElementById('chartGraph'));
+      chart.setOption({
+        backgroundColor: 'transparent',
+        tooltip: { backgroundColor:'rgba(0,0,0,.7)', borderColor:'transparent', textStyle:{color:'#fff'} },
+        series: [{
+          type: 'graph', layout: 'force', force: { repulsion: 200, edgeLength: [80,150] },
+          roam: true, draggable: true,
+          label: { show: true, color: 'rgba(255,255,255,.7)', fontSize: 10, position: 'bottom' },
+          lineStyle: { color: 'source', curveness: .3, opacity: .2 },
+          edgeSymbol: ['none', 'arrow'], edgeSymbolSize: [0, 6],
+          nodes, links,
+          emphasis: { focus: 'adjacency', lineStyle: { width: 2, opacity: .6 } },
+        }]
+      });
+      mountChart(document.getElementById('chartGraph'), chart);
+    })();
+
+    // 🔹 Chart 7: 3D Scatter - Priority × Category
+    (function(){
+      const catMap = {pre_sales:'售前', in_sales:'售中', after_sales:'售后', custom:'自定义'};
+      const priorityMap = {high:'高', medium:'中', low:'低'};
+      const priorityIdx = {high:2, medium:1, low:0};
+      const catKeys = ['pre_sales','in_sales','after_sales','custom'];
+      const data = [];
+      ev.forEach(e => {
+        const ci = catKeys.indexOf(e.category);
+        const pi = priorityIdx[e.priority] || 1;
+        if(ci >= 0) data.push([ci, pi, 1 + Math.random() * 0.5]);
+      });
+
+      const chart = echarts.init(document.getElementById('chart3DScatter'));
+      chart.setOption({
+        backgroundColor: 'transparent',
+        tooltip: { backgroundColor:'rgba(0,0,0,.7)', borderColor:'transparent', textStyle:{color:'#fff'},
+          formatter: p => `${catMap[catKeys[p.data[0]]]} · ${priorityMap[Object.keys(priorityMap).find(k=>priorityIdx[k]===p.data[1])]} (${data.filter(d=>d[0]===p.data[0]&&d[1]===p.data[1]).length} 条)` },
+        grid3D: {
+          viewControl: { alpha: 25, beta: 20, distance: 200, autoRotate: true, autoRotateSpeed: 3 },
+          light: { main: { intensity: 1.2 }, ambient: { intensity: .4 } },
+          postEffect: { enable: true, SSAO: { enable: true, quality: 'low' } },
+          boxWidth: 100, boxDepth: 80, boxHeight: 30,
+        },
+        xAxis3D: { type: 'category', data: catKeys.map(c=>catMap[c]), ...axisStyle },
+        yAxis3D: { type: 'category', data: ['低','中','高'], ...axisStyle },
+        zAxis3D: { type: 'value', ...axisStyle, name: '密集度', nameTextStyle: {color:'rgba(255,255,255,.4)'} },
+        series: [{
+          type: 'scatter3D',
+          data,
+          symbolSize: d => Math.max(4, d[2] * 10),
+          itemStyle: { color: d => palette[d.data[0] % palette.length], opacity: .6 },
+          emphasis: { itemStyle: { opacity: 1 }, label: { show: false } },
+        }]
+      });
+      mountChart(document.getElementById('chart3DScatter'), chart);
+    })();
+
+    // Show grid
+    document.getElementById('dboardGrid').style.opacity = '1';
+    document.getElementById('loadingOverlay').style.display = 'none';
+
+  } catch(e){
+    console.error('Dashboard data error:', e);
+    document.getElementById('loadingOverlay').innerHTML = '<div style="color:rgba(255,255,255,.5)">加载失败，请刷新重试</div>';
+  }
+}
+
+initDashboard();
+</script>
+{% endblock %}
