@@ -31,7 +31,7 @@ class Message(models.Model):
     content = models.TextField(blank=True, verbose_name='内容')
     attachment = models.FileField(upload_to='attachments/', null=True, blank=True, verbose_name='附件')
     attachment_name = models.CharField(max_length=255, blank=True, verbose_name='附件名称')
-    attachment_type = models.CharField(max_length=64, blank=True, verbose_name='附件类型')
+    attachment_type = models.CharField(max_length=255, blank=True, verbose_name='附件类型')
     created_at = models.DateTimeField(auto_now_add=True, verbose_name='发送时间')
     updated_at = models.DateTimeField(auto_now=True, verbose_name='更新时间')
     is_read = models.BooleanField(default=False, verbose_name='已读')
