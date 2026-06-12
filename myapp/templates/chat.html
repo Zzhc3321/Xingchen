@@ -68,7 +68,7 @@
         </div>
         <label class="btn btn-outline-secondary mb-0" style="border-radius:999px;cursor:pointer;padding:6px 12px" title="发送文件">
           <i class="bi bi-paperclip"></i>
-          <input type="file" id="fileInput" style="display:none">
+          <input type="file" id="fileInput" style="display:none" accept=".txt,.md,.mdx,.markdown,.pdf,.html,.xlsx,.xls,.doc,.docx,.csv,.eml,.msg,.pptx,.ppt,.xml,.epub">
         </label>
         <div style="flex:1">
           <div id="pendingFile" style="display:none;margin-bottom:4px;font-size:.75rem;color:var(--brand);background:var(--brand-soft);border-radius:8px;padding:4px 10px;align-items:center;gap:6px">
@@ -423,6 +423,22 @@ function renderMessages(){
   scrollToBottom();
 }
 
+function fileIconMap(url) {
+  const m = url.match(/\.(\w+)(?:\?|$)/i);
+  if (!m) return 'bi-file-earmark';
+  const ext = m[1].toLowerCase();
+  const map = {
+    pdf:'bi-filetype-pdf', txt:'bi-filetype-txt', md:'bi-filetype-md', mdx:'bi-filetype-md',
+    markdown:'bi-filetype-md', html:'bi-filetype-html', htm:'bi-filetype-html',
+    xlsx:'bi-filetype-xlsx', xls:'bi-filetype-xls', csv:'bi-filetype-csv',
+    doc:'bi-filetype-doc', docx:'bi-filetype-docx',
+    ppt:'bi-filetype-ppt', pptx:'bi-filetype-pptx',
+    xml:'bi-filetype-xml', epub:'bi-filetype-epub',
+    eml:'bi-envelope', msg:'bi-envelope',
+  };
+  return map[ext] || 'bi-file-earmark';
+}
+
 function appendMessage(msg){
   const isMe = msg.sender_id === CURRENT_USER?.id;
   const div = document.createElement('div');
@@ -441,7 +457,7 @@ function appendMessage(msg){
       if(isImg){
         contentHtml += `<img src="${msg.attachment_url}" class="rounded-3 mt-1" style="max-width:280px;max-height:320px;cursor:pointer" onclick="previewImage('${msg.attachment_url}')" alt="">`;
       } else {
-        contentHtml += `<a href="${msg.attachment_url}" target="_blank" class="d-block mt-1 p-2 rounded-3 text-decoration-none" style="background:var(--soft);border:1px solid var(--line)"><i class="bi bi-file-earmark me-1"></i>${msg.attachment_name || '文件'}</a>`;
+        contentHtml += `<a href="${msg.attachment_url}" target="_blank" class="d-block mt-1 p-2 rounded-3 text-decoration-none" style="background:var(--soft);border:1px solid var(--line)"><i class="bi ${fileIconMap(msg.attachment_url)} me-1"></i>${msg.attachment_name || '文件'}</a>`;
       }
     }
   }
@@ -502,7 +518,7 @@ function updateOptimisticMessage(realMsg){
         if(isImg){
           contentHtml += `<img src="${realMsg.attachment_url}" class="rounded-3 mt-1" style="max-width:280px;max-height:320px;cursor:pointer" onclick="previewImage('${realMsg.attachment_url}')" alt="">`;
         } else {
-          contentHtml += `<a href="${realMsg.attachment_url}" target="_blank" class="d-block mt-1 p-2 rounded-3 text-decoration-none" style="background:var(--soft);border:1px solid var(--line)"><i class="bi bi-file-earmark me-1"></i>${realMsg.attachment_name || '文件'}</a>`;
+          contentHtml += `<a href="${realMsg.attachment_url}" target="_blank" class="d-block mt-1 p-2 rounded-3 text-decoration-none" style="background:var(--soft);border:1px solid var(--line)"><i class="bi ${fileIconMap(realMsg.attachment_url)} me-1"></i>${realMsg.attachment_name || '文件'}</a>`;
         }
       }
     }

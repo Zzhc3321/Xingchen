@@ -1,4 +1,5 @@
 import json
+import os
 from datetime import timedelta
 from django.contrib.auth.decorators import login_required
 from django.core.files.storage import default_storage
@@ -167,8 +168,12 @@ def send_message_view(request, conversation_id):
     attachment_name = ''
     attachment_type = ''
 
+    ALLOWED_EXT = {'.txt','.md','.mdx','.markdown','.pdf','.html','.xlsx','.xls','.doc','.docx','.csv','.eml','.msg','.pptx','.ppt','.xml','.epub'}
     if request.FILES.get('file'):
         f = request.FILES['file']
+        ext = os.path.splitext(f.name)[1].lower()
+        if ext not in ALLOWED_EXT:
+            return JsonResponse({'detail': f'不支持的文件类型 {ext}，仅支持文档类文件'}, status=400)
         path = default_storage.save(f'attachments/{f.name}', f)
         attachment_url = f'/media/{path}'
         attachment_name = f.name
